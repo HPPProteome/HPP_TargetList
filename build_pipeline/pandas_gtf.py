@@ -78,53 +78,62 @@ unexcepted_trans_type = ['nonsense_mediated_decay', 'protein_coding_CDS_not_defi
 
 
 print("Searching for coding genes")
-coding_gene = []
+coding_gene = {}
 for index, row in gtf_df.iterrows():
 	if row["feature"] == 'gene':
 		row['attribute'] = parse_attr(row['attribute'])
 		gene_type = row['attribute'].get('gene_type', 'N/A')[0]
 		if gene_type == 'protein_coding':
 		
-			gene_id = row['attribute'].get('gene_id', 'N/A')[0]
+			gene_id = row['attribute'].get('gene_id', 'N/A')[0].split('.')[0]
 			gene_name = row['attribute'].get('gene_name', 'N/A')[0]
-			chrom = row['chrom']
+			chrom = row['chrom'][3:]
 			start, end = row['start'], row['end']
 			tag = row['attribute'].get('tag', 'N/A')
 			trans_type = row['attribute'].get('transcript_type', 'N/A')[0]
 			if trans_type not in unexcepted_trans_type:
-				coding_gene.append([gene_id.split('.')[0], gene_name, chrom, start, end, None, trans_type, None, None, tag])
-
-used_genes = []
-for i in range(0, len(coding_gene)):
-	if 'readthrough_gene' not in coding_gene[i][-1]:
-		used_genes.append(coding_gene[i])
-
-print(len(used_genes))
-
+				if 'readthrough_gene' not in tag:
+					coding_gene[gene_id] = {"gene_id": gene_id, "gene_name":gene_name, "chrom": chrom, "start": start, "end": end, "trans_id": None, "transl_type": None, "transl_id": None, "CDS": None}
+ 
 
 
 fasta_dict = {record.description: record for record in SeqIO.parse(fasta_file, "fasta")}
-found = False
-for i, gene_info in enumerate(used_genes):
-    gene_id = gene_info[0]
-    for description, data in fasta_dict.items():
-        if gene_id in description:
-            record_id = data.id.split("|")
+print(len(coding_gene))
+print("Adding trans_id and CDS")
+for gene in coding_gene:
+	for description, data in fasta_dict.items():
+		if gene in description:
+			record = data.id.split("|")
+			coding_gene[gene]['trans_id'] = record[1].split('.')[0]
+			coding_gene[gene]['transl_id'] = record[0].split('.')[0]
+			coding_gene[gene]['CDS'] = record[-1]
+			break
+			
 
-            used_genes[i][5] = record_id[1].split('.')[0]  # Transcript ID
-            used_genes[i][7] = record_id[0].split('.')[0]  # Translation ID
-            used_genes[i][8] = record_id[-1]
-            break
-
-
-
-
-
-tag_cutter = [gene[:-1] for gene in used_genes]
+print("Looking for translation type")
 
 
+#Add transl id, deal with overwritting of tags for diff type so overwrting key/value
+for i, row in gtf_df.iterrows():
+	translation_type = None
+	if row['feature'] == 'transcript':
+		row['attribute'] = parse_attr(row['attribute'])
+		gene_id = row['attribute'].get('gene_id', 'N/A')[0].split('.')[0]
+		if gene_id in coding_gene:
+			tag = row['attribute'].get('tag', 'N/A')
+			translation_type = None
+			
+			for i in tag:
+				if i == "MANE_Select":
+					translation_type = "Mane Select"
+				elif i == "Ensembl_canonical":
+					translation_type = "canonical"
+			if coding_gene[gene_id]['transl_type'] == None:
+				coding_gene[gene_id]['transl_type'] = translation_type
+	
+print("Making Frame")
+final_frame = pd.DataFrame(coding_gene).T
 
-final_frame = pd.DataFrame(tag_cutter, columns = ["Gene ID", "Gene Name", "Chromosome", "Start", "End", "Transcript ID", "Transcription Type", "Translation ID", "CDS"])
 print(final_frame.head)
 final_frame.to_excel("output.xlsx") 
 
