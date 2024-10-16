@@ -107,7 +107,7 @@ for gene in coding_gene:
 		if gene in description:
 			record = data.id.split("|")
 			coding_gene[gene]['trans_id'] = record[1].split('.')[0]
-			coding_gene[gene]['transl_id'] = record[-2].split('.')[0]
+			coding_gene[gene]['transl_id'] = record[0].split('.')[0]
 			coding_gene[gene]['CDS'] = record[-1]
 			break
 not_in_fasta = []		
