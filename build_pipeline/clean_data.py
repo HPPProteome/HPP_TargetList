@@ -90,6 +90,8 @@ gene_fields = [
 complete_genes_lst = []
 exceptions_lst = []
 
+human_look_lst = []
+
 for index, row in gene_data.iterrows():
 	if not isinstance(row['protein length'], list):
 		protein_length = row['protein length'].strip()
@@ -99,18 +101,21 @@ for index, row in gene_data.iterrows():
 		else:
 			exceptions_lst.append(row)
 	else:
-		exceptions_lst.append(row)
+		human_look_lst.append(row)
 
 
 complete_genes = pd.DataFrame(complete_genes_lst,columns=gene_fields)
 exceptions = pd.DataFrame(exceptions_lst ,columns=gene_fields)
+human_look = pd.DataFrame(human_look_lst ,columns=gene_fields)
+
 
 print(complete_genes.shape)
 print(exceptions.shape)
+print(human_look.shape)
 
 print("Making Frames")
 gene_data.to_excel("full_table.xlsx")
 complete_genes.to_excel("complete_genes.xlsx")
 exceptions.to_excel("exceptions.xlsx")
-
+human_look.to_excel("look_over.xlsx")
 print("done")
