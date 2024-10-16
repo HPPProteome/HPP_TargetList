@@ -16,7 +16,7 @@ for record in SeqIO.parse(fasta_file, "fasta"):
         continue
     
     trans_id = description[1].split('.')[0]  # Transcript ID
-    transl_id = description[-2].split('.')[0]  # Translation ID
+    transl_id = description[0].split('.')[0]  # Translation ID
     
     fasta_entries.append((gene_id, protein_length, trans_id, transl_id))
 
