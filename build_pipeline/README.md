@@ -4,10 +4,13 @@ HPPP Proteome: Combining GENCODE and UniProtKB datasets
 The goal of this pipeline is to combine the data from all protein coding genes in GENCODE with the information in UniProtKB
 
 Install and Run:
+```bash
 git clone https://github.com/HPPProteome/HPP_TargetList/ 
-cd HPP_TargetList/build_pipeline 
-python RUN_ME.py
 
+cd HPP_TargetList/build_pipeline 
+
+python RUN_ME.py
+```
 All Scripts and their output:
 Protein_list_builder.py:
 -	Downloads the newest version GENCODE’s basic gene annotations GTF file and unzips it into gencode.v46.annotation.gtf if file is not already present.
