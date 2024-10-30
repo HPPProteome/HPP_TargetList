@@ -11,8 +11,9 @@ cd HPP_TargetList/build_pipeline
 
 python RUN_ME.py
 ```
-All Scripts and their output:
-Protein_list_builder.py:
+# All Scripts and their output:
+
+# Protein_list_builder.py:
 -	Downloads the newest version GENCODE’s basic gene annotations GTF file and unzips it into gencode.v46.annotation.gtf if file is not already present.
 -	Outputs an excel file: coding_protiens.xlsx, which contains all 19,411 protein coding genes in the GENCODE GTF file.
 Link_to_uniprot.py:
@@ -21,18 +22,18 @@ Link_to_uniprot.py:
 -	Outputs an excel file: uniprot_output.xlsx, which contains an updated table of the 19,411 genes with all relevant UniProtKB entries.
 
   
-Clean_data.py:
+# Clean_data.py:
 -	Takes in excel file: uniprot_output.xlsx from link_to_uniprot.py and removes any unnecessary UniProtKB entries.
 -	Outputs two files: look_over.xlsx and full_table.xlsx.
 -	look_over.xlsx is a file that holds all genes where a single UniProtKB entry could not be isolates. (Currently 29)
 -	full_table.xlsx is a table of all 19,411 genes, including those in look_over.xlsx, where most UniProtKB entries have been removed to leave 1 GENCODE gene == 1 UniProtKB entry.
 
   
-Link_to_fasta:
+# Link_to_fasta:
 -	Downloads the newest version of GENCODE’s Protein-coding transcript translation sequences FASTA file and unzips it into gencode.v46.pc_translations.fa if file is not present.
 -	Takes in full_table.xlsx from clean_data.py and links the UniProtKB ENSP numbers with the GENCODE FASTA file to get GENCODE CDS length. Gene symbols are used when a ENSP is not present.
 -	Outputs final.xlsx, which is the most complete table.
 
   
-RUN_ME.py:
+# RUN_ME.py:
 -	Runs all scripts in order: protein_list_builder.py > link_to_uniprot.py > clean_data.py >  link_to_fasta.
