@@ -15,7 +15,6 @@ columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein le
 for i in columns:
 	gene_data[i] = gene_data[i].apply(setOne)
 
-#SETS ENSABL to list
 
 #Gets rid of any false entries in a reviewed set
 for index, row in gene_data.iterrows():
@@ -94,24 +93,27 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'isoform'] = row['isoform'][0]
 print("Number of repeats:", repeats)
 
-#Chooses CDS length when muiltple 
+#Chooses highest CDS length when muiltiple 
 for index, row in gene_data.iterrows():
 	if len(row['entry_type']) > 1 and not isinstance(row['entry_type'], str):
+		mini_dict = {"longest":0, "index":None}
 		for i in range(0, len(row['protein length'])):
-			protein_length = row['protein length'][i].strip()  # Remove extra spaces
-			cds_value = str(row['CDS']).split('.')[0].strip()  # Remove extra spaces from CDS and use before '.'
-			if protein_length == cds_value:
-				#print(len(row['protein length']), len(row['evidence']), type(row['protein length']), type(row['evidence']))
-				gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
-				gene_data.at[index, 'entry_name'] = row['entry_name'][i]
-				gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]
-				gene_data.at[index, 'description'] = row['description'][i]
-				gene_data.at[index, 'protein length'] = row['protein length'][i]
-				gene_data.at[index, 'evidence'] = row['evidence'][i]
-				gene_data.at[index, 'entry_type'] = row['entry_type'][i]
-				break
-
-
+			if int(row['protein length'][i]) > mini_dict["longest"]:
+				mini_dict["longest"] = int(row['protein length'][i])
+				mini_dict["index"] = i
+	
+		i = mini_dict["index"]
+		gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
+		gene_data.at[index, 'entry_name'] = row['entry_name'][i]
+		gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]
+		gene_data.at[index, 'description'] = row['description'][i]
+		gene_data.at[index, 'protein length'] = row['protein length'][i]
+		gene_data.at[index, 'evidence'] = row['evidence'][i]
+		gene_data.at[index, 'entry_type'] = row['entry_type'][i]
+		gene_data.at[index, 'ENSP'] = row['ENSP'][i]
+		gene_data.at[index, 'ENST'] = row['ENST'][i]
+		gene_data.at[index, 'isoform'] = row['isoform'][i]
+		
 
 
 gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 
@@ -135,16 +137,9 @@ for index, row in gene_data.iterrows():
                         gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                     else:
                         gene_data.at[index, 'isoform'] = 'None'
-hand_look = []
-for index, row in gene_data.iterrows():
-	if isinstance(row['evidence'],list):
-		hand_look.append(row)
 
-human_look = pd.DataFrame(hand_look,columns=gene_fields)
-print(human_look.shape)
 print(gene_data.shape)
 
 print("Making Frames")
-human_look.to_excel("look_over.xlsx")
 gene_data.to_excel("full_table.xlsx")
 print("done")
