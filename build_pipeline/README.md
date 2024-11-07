@@ -28,11 +28,12 @@ Link_to_uniprot.py:
 -	look_over.xlsx is a file that holds all genes where a single UniProtKB entry could not be isolates. (Currently 29)
 -	full_table.xlsx is a table of all 19,411 genes, including those in look_over.xlsx, where most UniProtKB entries have been removed to leave 1 GENCODE gene == 1 UniProtKB entry.
 
-  
+
 # Link_to_fasta:
 -	Downloads the newest version of GENCODE’s Protein-coding transcript translation sequences FASTA file and unzips it into gencode.v46.pc_translations.fa if file is not present.
 -	Takes in full_table.xlsx from clean_data.py and links the UniProtKB ENSP numbers with the GENCODE FASTA file to get GENCODE CDS length. Gene symbols are used when a ENSP is not present.
 -	Outputs final.xlsx, which is the most complete table.
+-	Also outputs: No_Uniprot_Entry.xlsx, which is a collection of 9 GENCODE entries with no corrosponding UniProt ID. No_Fasta_entry.xlsx, which is a list of all GENCODE proteins in the GTF file but not in the FASTA file. Identical_UniProtKB_entries.xlsx, which is a list of all ENSG numbers that point to the same UniProt ID.
 
   
 # RUN_ME.py:
