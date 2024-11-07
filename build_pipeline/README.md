@@ -11,6 +11,9 @@ cd HPP_TargetList/build_pipeline
 
 python RUN_ME.py
 ```
+# Notes:
+- Make sure that the manualFix.tsv file is in the same folder where you are running RUN_ME.py.
+
 # All Scripts and their output:
 
 # Protein_list_builder.py:
