@@ -73,6 +73,61 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'ENST'] = [row['ENST'][i].strip() for i in range(len(keeper)) if keeper[i]]
 		gene_data.at[index, 'isoform'] = [row['isoform'][i].strip() for i in range(len(keeper)) if keeper[i]]
 
+
+#Manually Assigns the correct UniProt ID to 9 protiens
+manual_fix = pd.read_csv("manualFix.tsv", sep='\t')
+manual_dict = manual_fix.set_index('Gene ID')['UniProt ID'].to_dict()
+
+
+for index, row in gene_data.iterrows():
+	if row['gene_id'] in manual_dict:
+                i = row['uniprot_id'].index(manual_dict[row['gene_id']])
+                gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
+                gene_data.at[index, 'entry_name'] = row['entry_name'][i]
+                gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]
+                gene_data.at[index, 'description'] = row['description'][i]
+                gene_data.at[index, 'protein length'] = row['protein length'][i]
+                gene_data.at[index, 'evidence'] = row['evidence'][i]
+                gene_data.at[index, 'entry_type'] = row['entry_type'][i]
+                gene_data.at[index, 'ENSP'] = row['ENSP'][i]
+                gene_data.at[index, 'ENST'] = row['ENST'][i]
+                gene_data.at[index, 'isoform'] = row['isoform'][i]
+
+
+
+
+
+
+
+
+
+#Chooses the lowest Isoform if they are present
+for index, row in gene_data.iterrows():
+	if len(row['isoform']) > 1 and isinstance(row['isoform'], list):
+		if not all(item == 'None' or (isinstance(item, str) and item.startswith("ENSG")) for item in row['isoform']):
+			useable_isoforms = [[index, isoform] for index, isoform in enumerate(row['isoform']) if isoform != 'None' and not isoform.startswith("ENSG")]
+			if not any(None in sublist for sublist in useable_isoforms):
+				#print(useable_isoforms)
+				#print(row['gene_id'])
+				
+				i, _ = min(useable_isoforms, key=lambda x: int(x[1].split('-')[-1]))
+			
+				gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
+				gene_data.at[index, 'entry_name'] = row['entry_name'][i]
+				gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]  
+				gene_data.at[index, 'description'] = row['description'][i]  
+				gene_data.at[index, 'protein length'] = row['protein length'][i]
+				gene_data.at[index, 'evidence'] = row['evidence'][i]
+				gene_data.at[index, 'entry_type'] = row['entry_type'][i]
+				gene_data.at[index, 'ENSP'] = row['ENSP'][i]
+				gene_data.at[index, 'ENST'] = row['ENST'][i]
+				gene_data.at[index, 'isoform'] = row['isoform'][i]
+
+
+
+
+
+
 repeats = 0
 #Uses 1 entry when there are muiltple replicas
 for index, row in gene_data.iterrows():
@@ -133,7 +188,7 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'entry_type'] = row['entry_type'][0]
                     gene_data.at[index, 'ENSP'] = row['ENSP'][0].strip()
                     gene_data.at[index, 'ENST'] = row['ENST'][0].strip()
-                    if row['isoform'][0] != None and row['isoform'][0].strip()[:3] != 'ENS':
+                    if row['isoform'][0] != None and not row['isoform'][0].startswith("ENSG"):
                         gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                     else:
                         gene_data.at[index, 'isoform'] = 'None'

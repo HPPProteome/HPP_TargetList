@@ -56,6 +56,7 @@ print("GTF file read")
 unexcepted_tags = ['readthrough_transcript', 'EnsEMBL_merge_exception', 'readthrough_gene', 'exp_conf', 'RNA_Seq_supported_only']
 unexcepted_trans_type = ['nonsense_mediated_decay', 'protein_coding_CDS_not_defined', 'retained_intron', 'TEC']
 
+gtf_df = gtf_df[gtf_df['feature'].isin(['gene','transcript']) ]
 
 print("Searching for coding genes")
 coding_gene = {}

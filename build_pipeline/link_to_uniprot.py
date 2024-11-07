@@ -12,7 +12,7 @@ def level_converter(description):
 		return 2
 	elif 'homology' in description:
 		return 3
-	elif 'predicted' in description:
+	elif 'Predicted' in description:
 		return 4
 	else:
 		return 5
@@ -39,31 +39,24 @@ def clean_string(s):
             new_list = s.split(' ')
             for j in range(len(new_list)):
                 new_list[j] = new_list[j].replace(";", "").replace("[", "").replace("]", "")
-                
-        oldest = {"num":10*10**10, "index":None}
-        if any(isinstance(el, list) for el in new_list):
-            for i in range(len(new_list)):
-                if len(new_list[i]) > 3:
-                    isoform = new_list[i][-1]                
-                    if len(isoform) > 0:
-                        #print(isoform)
-                        if int(isoform[-1]) < oldest["num"]:
-                            oldest["num"] = int(new_list[i][-1].split('-')[-1].replace(']', ''))
-                            oldest["index"] = i
-            if oldest["index"] == None:
+        #print(new_list)
+        new_list = [sublist for sublist in new_list if any(item != "" for item in sublist)]
+        if isinstance(new_list[0], list):
+            if len(new_list[0]) > 3:
                 for i in range(0, len(new_list)):
-                    if len(new_list[i]) > 1:
-                        gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": None})
+                    gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": new_list[i][-1]})
         
             else:
-                i = oldest["index"]
-                gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": new_list[i][-1]})
-        else:
-            gene_ids.append({"gene_id":new_list[2].split('.')[0], "trans_id":new_list[0].split('.')[0], "ensg":new_list[1], "isoform": new_list[-1]})
-    
+                for i in range(0, len(new_list)):
+                    gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": None})
+        elif len(new_list) > 0 and isinstance(new_list[0], str):
+            for i in range(0, len(new_list)):
+                gene_ids.append({"gene_id":new_list[2].split('.')[0], "trans_id":new_list[0].split('.')[0], "ensg":new_list[1], "isoform": new_list[-1]})
+                        
     else:
         gene_ids.append({"gene_id":""})
     return gene_ids
+
 
 
 file = "uniprot.tsv"
@@ -102,7 +95,6 @@ print(len(gene_dict))
 all_gene = pd.read_csv(file, sep='\t')
 all_gene['Protein existence'] = all_gene['Protein existence'].apply(level_converter)
 all_gene['Reviewed'] = all_gene['Reviewed'].apply(reviewed)
-print(all_gene.iloc[80334])
 
 
 print("Making connections with gene ids")
@@ -140,6 +132,8 @@ for index, row in all_gene.iterrows():
                         gene_dict[gene]['ENST'].append(row_dict[i]["trans_id"])
                         gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
 
+
+
 print("Making connections with gene symbols")
 gene_symbols_dict = {}
 for i in gene_dict:
@@ -147,18 +141,21 @@ for i in gene_dict:
 symbol_count = 0
 #Write code to look for genes through symbols; need {"gene_symbol":gene_id}
 for index, row in all_gene.iterrows():
-	ids = str(row['Gene Names']).split(' ')
+	ids = str(row['Gene Names']).replace(';', '').split(' ')
 	for name in ids:
 		if name.strip() in gene_symbols_dict:
-			ensg = gene_symbols_dict[name.strip()]
-			if (not gene_dict[ensg]['reviewed'] and row['Reviewed']) or (gene_dict[ensg]['found_with'] == None): 
+                        ensg = gene_symbols_dict[name.strip()]
+                        if (row['Reviewed']) or (gene_dict[ensg]['found_with'] == None): 
                                     #print(gene_dict[i]['gencode_symbol'], ids)
                                     gene_dict[ensg]['entry_name'].append(row['Entry Name'])
                                     gene_dict[ensg]['uniprot_id'].append(row['Entry'])
                                     gene_dict[ensg]['description'].append(row['Protein names'])
                                     gene_dict[ensg]['protein length'].append(row['Length'])
                                     gene_dict[ensg]['gene_symbol'].append(name.strip())
-                                    gene_dict[ensg]['found_with'] = "gene_name"
+                                    
+                                    if gene_dict[ensg].get('found_with') is None:
+                                            gene_dict[ensg]['found_with'] = "gene_name"
+                                    
                                     gene_dict[ensg]['reviewed'] = row['Reviewed']
                                     gene_dict[ensg]['evidence'].append(row['Protein existence'])
                                     gene_dict[ensg]['entry_type'].append(row['Reviewed'])
@@ -170,7 +167,11 @@ for index, row in all_gene.iterrows():
                                     symbol_count += 1 
 
 
+
+
+
 not_found = 0
+
 for i in gene_dict:
 	if not gene_dict[i]['entry_name']:
 		not_found += 1
@@ -188,6 +189,10 @@ print(len(gene_dict))
 print("Making Frame")
 final_frame = pd.DataFrame(gene_dict).T
 
+gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 
+    "transl_id", "CDS", "gencode_symbol", "ENSP", "ENST", "uniprot_id", 
+    "reviewed", "entry_name", "gene_symbol", "description", "protein length", 
+    "entry_type", "evidence", "found_with", "isoform"]
 
 
 merged_df = pd.merge(gene_df, final_frame, on='gene_id', how='inner')

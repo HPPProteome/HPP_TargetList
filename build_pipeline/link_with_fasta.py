@@ -35,28 +35,34 @@ else:
 
 
 genes_dict = {}
+symbols_dict = {}
+ensg_dict = {}
 for record in SeqIO.parse(fasta_file, "fasta"):
     header_parts = record.description.split('|')
     ensp_number = header_parts[0]
     gene_symbol = header_parts[-2]
     cds_length = header_parts[-1]
-    enst = header_parts[1]
-    genes_dict[ensp_number] = {"CDS_length": cds_length, "gene_symbol": gene_symbol, "enst":enst}
+    ensg_number = header_parts[2].split('.')[0]
+    enst_number = header_parts[1]
+    genes_dict[ensp_number] = {"CDS_length": cds_length, "gene_symbol": gene_symbol, "enst":enst_number}
 
-symbols_dict = {}
-for record in SeqIO.parse(fasta_file, "fasta"):
-    header_parts = record.description.split('|')
-    ensp = header_parts[0]
-    enst = header_parts[1]
-    gene_symbol = header_parts[-2]
-    cds_length = header_parts[-1]
     if gene_symbol not in symbols_dict:
         symbols_dict[gene_symbol] = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": []}
     
     symbols_dict[gene_symbol]["CDS_lengths"].append(cds_length)
-    symbols_dict[gene_symbol]["ensts"].append(enst)
-    symbols_dict[gene_symbol]["ensps"].append(ensp)
+    symbols_dict[gene_symbol]["ensts"].append(enst_number)
+    symbols_dict[gene_symbol]["ensps"].append(ensp_number)
     symbols_dict[gene_symbol]['gene_symbols'].append(gene_symbol)
+    
+    if ensg_number not in ensg_dict:
+        ensg_dict[ensg_number]  = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": []}
+
+    ensg_dict[ensg_number]["CDS_lengths"].append(cds_length)
+    ensg_dict[ensg_number]["ensts"].append(enst_number)
+    ensg_dict[ensg_number]["ensps"].append(ensp_number)
+    ensg_dict[ensg_number]['gene_symbols'].append(gene_symbol)
+
+
 
 for index, row in gene_file.iterrows():
 	if row['ENSP'] in genes_dict:
@@ -77,7 +83,7 @@ for index, row in gene_file.iterrows():
 			best = int(row['protein length'])
 
 			result = [int(x) - best for x in list_num] 
-			best_fit = result.index(min(result)) 
+			best_fit = result.index(min(result, key=abs)) 
 			
 			gene_file.at[index, 'CDS'] = symbols_dict[row['gene_symbol']]["CDS_lengths"][best_fit]
 			gene_file.at[index, 'gencode_symbol'] = symbols_dict[row['gene_symbol']]['gene_symbols'][best_fit]
@@ -85,12 +91,32 @@ for index, row in gene_file.iterrows():
 			gene_file.at[index, 'ENSP'] = symbols_dict[row['gene_symbol']]['ensps'][best_fit]
 			
 
+for index, row in gene_file.iterrows(): #Takes highest CDS length for any genes that don't have a UniProt Counterpart
+	if row['CDS'] == "nan" and  row['gene_id'] in ensg_dict:
+		list_num = ensg_dict[row['gene_id']]['CDS_lengths']
+		highest_index = list_num.index(max(list_num))
+		
+		gene_file.at[index, 'CDS'] = ensg_dict[row['gene_id']]['CDS_lengths'][highest_index]
+		gene_file.at[index, 'gencode_symbol'] = ensg_dict[row['gene_id']]['gene_symbols'][highest_index]
+		gene_file.at[index, 'ENST'] = ensg_dict[row['gene_id']]['ensts'][highest_index]
+		gene_file.at[index, 'ENSP'] = ensg_dict[row['gene_id']]['ensps'][highest_index]
 
-num_noCDS = 0
+
+
+noCDS = []
+no_uniprot = []
 for index, row in gene_file.iterrows():
+        if str(row['isoform']).startswith("ENSG"):
+            gene_file.at[index, 'isoform'] = None
         if row['CDS'] == "nan":
-            num_noCDS += 1
-print("Number of no CDS lengths", num_noCDS)
+            noCDS.append(row)
+        if pd.isnull(row['uniprot_id']):
+            no_uniprot.append(row)
+
+print("\nNumber of GENCODE genes not in FASTA", len(noCDS))
+
+print("Number of GENCODE genes with no UniProt connection", len(no_uniprot))
+
 
 gene_file["CDS"] = pd.to_numeric(gene_file["CDS"], errors="coerce")
 gene_file["protein length"] = pd.to_numeric(gene_file["protein length"], errors="coerce")
@@ -100,13 +126,32 @@ gene_file["Difference in lengths"] = abs(gene_file["CDS"] - gene_file["protein l
 
 columns_to_export = [
     'gene_id', 'gene_name', 'chrom', 'start', 'end', 'transl_type',
-    'CDS', 'genecode_name', 'gencode_symbol', 'ENSP', 'ENST',
+    'CDS', 'ENSP', 'ENST',
     'uniprot_id', 'reviewed', 'entry_name', 'gene_symbol', 'description',
-    'protein length', 'entry_type', 'evidence', 'found_with', 'isoform', 'Difference in lengths']
+    'protein length', 'evidence', 'found_with', 'isoform', 'Difference in lengths']
 
 gene_file_selected = gene_file[columns_to_export]
+gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Isoform","reviewed":"Reviewed"}) 
+
+#Creates Exception files
+#No uniprot entries
+noUniprot_df = pd.DataFrame(no_uniprot, columns=columns_to_export)
+
+#Same UniProtID
+
+duplicates = gene_file_selected[gene_file_selected['UniProtKB ID'].notna() & gene_file_selected.duplicated('UniProtKB ID', keep=False)].sort_values(by='UniProtKB ID').reset_index(drop=True)
+
+print("Number of duplicate UniProtKB IDs", duplicates.shape[0])
+
+
+#Not in Fasta
+noCDS_df = pd.DataFrame(noCDS, columns=columns_to_export)
+
+print("Making Frames")
+
+noUniprot_df.to_excel("No_Uniprot_Entry.xlsx", index=False)
 gene_file_selected[1:].to_excel("final.xlsx", index=False)
-
-
+noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
+duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
 
 
