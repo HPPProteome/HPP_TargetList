@@ -1,11 +1,20 @@
 import pandas as pd
-
+import os
+import subprocess
 
 def setOne(collection):
 	return collection.replace('[', '').replace(']', '').replace("'", '').strip().split(',')
 
 
 
+gene_data = "uniprot_output.xlsx"
+
+if not os.path.exists(gene_data):
+	print(f"{gene_data} file not found, running link_to_uniprot.py")
+	try:
+		subprocess.run(['python3', 'link_to_uniprot.py'], check=True)
+	except subprocess.CalledProcessError as e:
+		print(f"Error while running link_to_uniprot.py: {e}")
 
 gene_data = pd.read_excel("uniprot_output.xlsx")
 gene_data = gene_data.iloc[:,2:]

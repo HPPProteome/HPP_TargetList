@@ -4,11 +4,23 @@ import os
 import requests
 import shutil
 import gzip
+import subprocess
 
-version = 46
+version = 46 #Needs to be changed when version updates
 
-fasta_file = f"gencode.v{version}.pc_translations.fa"
+fasta_file = "gencode.pc_translations.fa"
+gene_file = "full_table.xlsx"
+
+if not os.path.exists(gene_file):
+	print(f"{gene_file} file not found, running clean_entries.py")
+	
+	try:
+		subprocess.run(['python3', 'clean_entries.py'], check=True)
+	except subprocess.CalledProcessError as e:
+		print(f"Error while running clean_entries.py: {e}")
+
 gene_file = pd.read_excel("full_table.xlsx")
+
 gene_file['gencode_symbol'] = gene_file['gencode_symbol'].astype(str)
 gene_file['trans_id'] = gene_file['trans_id'].astype(str)
 gene_file['CDS'] = gene_file['CDS'].astype(str)
@@ -18,8 +30,8 @@ if os.path.exists(fasta_file):
 else:
         print("Downloading gencode", fasta_file)
         url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.pc_translations.fa.gz"
-        output_gz_file = f"gencode.v{version}.pc_translations.gtf.gz"
-        output_gtf_file = f"gencode.v{version}.pc_translations.fa"
+        output_gz_file = "gencode.pc_translations.gtf.gz"
+        output_gtf_file = "gencode.pc_translations.fa"
 
         print("Downloading", url)
         response = requests.get(url, stream=True)

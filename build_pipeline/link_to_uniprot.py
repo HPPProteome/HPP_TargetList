@@ -3,6 +3,7 @@ import requests
 import shutil
 import gzip
 import pandas as pd
+import subprocess
 
 #Coverts the protien existance to a numrical figure
 def level_converter(description):
@@ -61,6 +62,13 @@ def clean_string(s):
 
 file = "uniprot.tsv"
 gene_file = "coding_protiens.xlsx"
+
+if not os.path.exists(gene_file):
+	print(f"Missing {gene_file} file, running protein_list_builder.py")
+	try:
+		subprocess.run(['python3', 'protein_list_builder.py'], check=True)
+	except subprocess.CalledProcessError as e:
+        	print(f"Error while running protein_list_builder.py: {e}")	
 
 #Checks for and downloads file
 print("Looking for uniprot gene file")

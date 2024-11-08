@@ -8,18 +8,18 @@ import gzip
 
 version = 46 #Change for formating
 
-gtf_file = f"gencode.v{version}.annotation.gtf"
+gtf_file = "gencode.annotation.gtf"
 
 
 #Checks for and downloads file
-print("Looking for GTF file and FASTA File")
+print("Looking for GTF file")
 if os.path.exists(gtf_file):
         print("GENCODE GTF File Found")
 else:
-	print("Downloading", gtf_file)
+	print("Downloading", gtf_file, "version", version)
 	url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.annotation.gtf.gz"
-	output_gz_file = f"gencode.v{version}.annotation.gtf.gz"
-	output_gtf_file = f"gencode.v{version}.annotation.gtf"
+	output_gz_file = "gencode.annotation.gtf.gz"
+	output_gtf_file = "gencode.annotation.gtf"
 
 	print("Downloading", url)
 	response = requests.get(url, stream=True)
@@ -60,13 +60,11 @@ gtf_df = gtf_df[gtf_df['feature'].isin(['gene','transcript']) ]
 
 print("Searching for coding genes")
 coding_gene = {}
-genes = 0
 for index, row in gtf_df.iterrows():
 	if row["feature"] == 'gene':
 		row['attribute'] = parse_attr(row['attribute'])
 		gene_type = row['attribute'].get('gene_type', 'N/A')[0]
 		if gene_type == 'protein_coding':
-			genes += 1
 			gene_id = row['attribute'].get('gene_id', 'N/A')[0].split('.')[0]
 			gene_name = row['attribute'].get('gene_name', 'N/A')[0]
 			chrom = row['chrom'][3:]
@@ -76,7 +74,9 @@ for index, row in gtf_df.iterrows():
 			if trans_type not in unexcepted_trans_type:
 				if 'readthrough_gene' not in tag:
 					coding_gene[gene_id] = {"gene_id": gene_id, "gene_name":gene_name, "chrom": chrom, "start": start, "end": end, "trans_id": None, "transl_type": None, "transl_id": None, "CDS": None}
-print(f"There are {genes} protien coding genes") 
+
+print(f"There are {len(coding_gene)} protien coding genes") 
+print("Adding translation ids and translation types")
 #Add transl id, deal with overwritting of tags for diff type so overwrting key/value
 for i, row in gtf_df.iterrows():
 	translation_type = None
