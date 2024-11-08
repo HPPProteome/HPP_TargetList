@@ -84,7 +84,16 @@ for index, row in gene_data.iterrows():
 
 
 #Manually Assigns the correct UniProt ID to 9 protiens
-manual_fix = pd.read_csv("manualFix.tsv", sep='\t')
+manual_file = "manualFix.tsv"
+
+if not os.path.exists(manual_file):
+	print(f"{manual_file} file not found, running manual_fix_file_maker.py")
+	try:
+		subprocess.run(['python3', 'manual_fix_list_maker.py'], check=True)
+	except subprocess.CalledProcessError as e:
+		print(f"Error while running manual_fix_list_maker.py: {e}")
+
+manual_fix = pd.read_csv(manual_file, sep='\t')
 manual_dict = manual_fix.set_index('Gene ID')['UniProt ID'].to_dict()
 
 
