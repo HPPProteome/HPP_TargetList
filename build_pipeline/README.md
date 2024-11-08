@@ -11,8 +11,6 @@ cd HPP_TargetList/build_pipeline
 
 python RUN_ME.py
 ```
-# Notes:
-- Make sure that the manualFix.tsv file is in the same folder where you are running RUN_ME.py.
 
 # All Scripts and their output:
 
@@ -27,9 +25,15 @@ Link_to_uniprot.py:
   
 # Clean_data.py:
 -	Takes in excel file: uniprot_output.xlsx from link_to_uniprot.py and removes any unnecessary UniProtKB entries.
+-	Takes in manualFix.tsv to specifically choose some (current: 8) uniprot entries to match to GENCODE entries.
 -	Outputs two files: look_over.xlsx and full_table.xlsx.
 -	look_over.xlsx is a file that holds all genes where a single UniProtKB entry could not be isolates. (Currently 29)
 -	full_table.xlsx is a table of all 19,411 genes, including those in look_over.xlsx, where most UniProtKB entries have been removed to leave 1 GENCODE gene == 1 UniProtKB entry.
+
+# Manual_fix_list_maker.py
+- Builds manualFix.tsv if clean_data.py can't find the file.
+- Can easily be updated to include other entries that need manual fixes.
+- Includes the GENCODE ENSG number and the correct UniProt ID for a given protein coding gene.
 
 
 # Link_to_fasta:
@@ -41,3 +45,4 @@ Link_to_uniprot.py:
   
 # RUN_ME.py:
 -	Runs all scripts in order: protein_list_builder.py > link_to_uniprot.py > clean_data.py >  link_to_fasta.
+-	Each script includes code to automatically run the preceding script if an expected input file is missing.
