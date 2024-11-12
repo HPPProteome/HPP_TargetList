@@ -153,7 +153,7 @@ for index, row in all_gene.iterrows():
 	for name in ids:
 		if name.strip() in gene_symbols_dict:
                         ensg = gene_symbols_dict[name.strip()]
-                        if (row['Reviewed']) or (gene_dict[ensg]['found_with'] == None): 
+                        if gene_dict[ensg]['found_with'] == None: 
                                     #print(gene_dict[i]['gencode_symbol'], ids)
                                     gene_dict[ensg]['entry_name'].append(row['Entry Name'])
                                     gene_dict[ensg]['uniprot_id'].append(row['Entry'])
