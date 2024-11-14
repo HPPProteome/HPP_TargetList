@@ -162,7 +162,7 @@ noCDS_df = pd.DataFrame(noCDS, columns=columns_to_export)
 print("Making Frames")
 
 noUniprot_df.to_excel("No_Uniprot_Entry.xlsx", index=False)
-gene_file_selected[1:].to_excel("final.xlsx", index=False)
+gene_file_selected.to_excel("final.xlsx", index=False)
 noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
 duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
 
