@@ -45,8 +45,6 @@ for index, row in gene_data.iterrows():
 		if max(rna_dict[row['Gene ID']]) >= 1 and row['PE'] > 2:
 			gene_data.at[index, 'PE'] = 2 
 			changed += 1
-	else:
-		print(row['Gene ID'])
 
 print("Number of present genes", count)
 print("Number of PE scores changed", changed)
