@@ -6,7 +6,7 @@ import shutil
 import gzip
 import subprocess
 
-version = 46 #Needs to be changed when version updates
+version = 47 #Needs to be changed when version updates
 
 fasta_file = "gencode.pc_translations.fa"
 gene_file = "full_table.xlsx"
