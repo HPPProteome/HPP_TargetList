@@ -6,7 +6,7 @@ import shutil
 import gzip
 
 
-version = 46 #Change for formating
+version = 47 #Change for formating
 
 gtf_file = "gencode.annotation.gtf"
 
