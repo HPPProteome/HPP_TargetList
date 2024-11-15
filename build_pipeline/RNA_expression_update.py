@@ -29,6 +29,9 @@ else:
 rna_data = pd.read_csv(rna_file, sep='\t')
 gene_data = pd.read_excel(gene_file)
 
+
+gene_data['Suggested PE'] = ''
+
 rna_dict = {}
 
 for index, row in rna_data.iterrows():
@@ -39,16 +42,25 @@ for index, row in rna_data.iterrows():
 
 count = 0
 changed = 0
+pe5 = []
 for index, row in gene_data.iterrows():
 	if row['Gene ID'] in rna_dict:
 		count += 1
 		if max(rna_dict[row['Gene ID']]) >= 1 and row['PE'] > 2:
-			gene_data.at[index, 'PE'] = 2 
+			gene_data.at[index, 'Suggested PE'] = 2
 			changed += 1
+	#else:
+		#print(row['Gene ID'])
+	if row['PE'] == 5:
+		pe5.append(gene_data.loc[index])
 
+
+PE5_df = pd.DataFrame(pe5)
 print("Number of present genes", count)
 print("Number of PE scores changed", changed)
 
 print("Making Frame")
 gene_data.to_excel("updatedPE.xlsx")
+PE5_df.to_excel("PE5_Protiens.xlsx", index=False)
+
 print("done")
