@@ -9,17 +9,17 @@ import subprocess
 version = 47 #Needs to be changed when version updates
 
 fasta_file = "gencode.pc_translations.fa"
-gene_file = "full_table.xlsx"
+gene_file = "updatedPE.xlsx"
 
 if not os.path.exists(gene_file):
-	print(f"{gene_file} file not found, running clean_entries.py")
+	print(f"{gene_file} file not found, running update_PE.py")
 	
 	try:
-		subprocess.run(['python3', 'clean_entries.py'], check=True)
+		subprocess.run(['python3', 'update_PE.py'], check=True)
 	except subprocess.CalledProcessError as e:
 		print(f"Error while running clean_entries.py: {e}")
 
-gene_file = pd.read_excel("full_table.xlsx")
+gene_file = pd.read_excel(gene_file)
 
 gene_file['gencode_symbol'] = gene_file['gencode_symbol'].astype(str)
 gene_file['trans_id'] = gene_file['trans_id'].astype(str)
@@ -117,6 +117,7 @@ for index, row in gene_file.iterrows(): #Takes highest CDS length for any genes 
 
 noCDS = []
 no_uniprot = []
+PE5 = []
 for index, row in gene_file.iterrows():
         if str(row['isoform']).startswith("ENSG"):
             gene_file.at[index, 'isoform'] = None
@@ -124,6 +125,9 @@ for index, row in gene_file.iterrows():
             noCDS.append(row)
         if pd.isnull(row['uniprot_id']):
             no_uniprot.append(row)
+        if row['evidence'] == 5:
+            PE5.append(row)
+
 
 print("\nNumber of GENCODE genes not in FASTA", len(noCDS))
 
@@ -140,7 +144,7 @@ columns_to_export = [
     'gene_id', 'gene_name', 'chrom', 'start', 'end', 'transl_type',
     'CDS', 'ENSP', 'ENST',
     'uniprot_id', 'reviewed', 'entry_name', 'gene_symbol', 'description',
-    'protein length', 'evidence', 'found_with', 'isoform', 'Difference in lengths']
+    'protein length', 'evidence', 'found_with', 'isoform', 'Difference in lengths', 'Suggested PE']
 
 gene_file_selected = gene_file[columns_to_export]
 gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Isoform","reviewed":"Reviewed"}) 
@@ -152,18 +156,20 @@ noUniprot_df = pd.DataFrame(no_uniprot, columns=columns_to_export)
 #Same UniProtID
 
 duplicates = gene_file_selected[gene_file_selected['UniProtKB ID'].notna() & gene_file_selected.duplicated('UniProtKB ID', keep=False)].sort_values(by='UniProtKB ID').reset_index(drop=True)
-
 print("Number of duplicate UniProtKB IDs", duplicates.shape[0])
-
 
 #Not in Fasta
 noCDS_df = pd.DataFrame(noCDS, columns=columns_to_export)
 
+
+#PE5 Protiens
+PE5_df = pd.DataFrame(PE5, columns=columns_to_export)
+print("Number of PE 5 proteins:", PE5_df.shape[0])
 print("Making Frames")
 
 noUniprot_df.to_excel("No_Uniprot_Entry.xlsx", index=False)
-gene_file_selected.to_excel("final.xlsx", index=False)
+gene_file_selected.to_excel(f"Supplimental_table_1_v{version}.xlsx", index=False)
 noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
 duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
-
+PE5_df.to_excel("PE5_Protiens.xlsx", index=False)
 

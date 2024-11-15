@@ -3,7 +3,7 @@ import requests
 import zipfile
 import pandas as pd
 
-gene_file = "final.xlsx"
+gene_file = "full_table.xlsx"
 rna_file = "rna_tissue_consensus.tsv"
 
 print("Looking for RNA_expression file")
@@ -26,6 +26,18 @@ else:
     print("Unzipped")
 
 
+if not os.path.exists(gene_file):
+	print(f"{gene_file} file not found, running clean_entries.p")
+	try:
+		subprocess.run(['python3', 'clean_entries.py'], check=True)
+	except subprocess.CalledProcessError as e:
+		print(f"Error while running link_to_uniprot.py: {e}")
+
+
+
+
+
+
 rna_data = pd.read_csv(rna_file, sep='\t')
 gene_data = pd.read_excel(gene_file)
 
@@ -42,25 +54,15 @@ for index, row in rna_data.iterrows():
 
 count = 0
 changed = 0
-pe5 = []
 for index, row in gene_data.iterrows():
-	if row['Gene ID'] in rna_dict:
+	if row['gene_id'] in rna_dict:
 		count += 1
-		if max(rna_dict[row['Gene ID']]) >= 1 and row['PE'] > 2:
+		if max(rna_dict[row['gene_id']]) >= 1 and row['evidence'] > 2:
 			gene_data.at[index, 'Suggested PE'] = 2
 			changed += 1
 	#else:
 		#print(row['Gene ID'])
-	if row['PE'] == 5:
-		pe5.append(gene_data.loc[index])
-
-
-PE5_df = pd.DataFrame(pe5)
-print("Number of present genes", count)
-print("Number of PE scores changed", changed)
 
 print("Making Frame")
 gene_data.to_excel("updatedPE.xlsx")
-PE5_df.to_excel("PE5_Protiens.xlsx", index=False)
-
 print("done")
