@@ -2,6 +2,7 @@ import os
 import requests
 import zipfile
 import pandas as pd
+import subprocess
 
 gene_file = "full_table.xlsx"
 rna_file = "rna_tissue_consensus.tsv"
