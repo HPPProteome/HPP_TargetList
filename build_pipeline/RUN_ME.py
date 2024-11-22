@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-scripts = ['protein_list_builder.py', 'link_to_uniprot.py', 'clean_entries.py', 'update_PE.py', 'link_with_fasta.py']
+scripts = ['protein_list_builder.py', 'link_to_uniprot.py', 'manual_fix_list_maker.py','clean_entries.py', 'update_PE.py', 'peptideAtlas_link.py', 'link_with_fasta.py', 'fasta_builder.py']
 
 repo_dir = os.path.expanduser('~/HPP_TargetList/build_pipeline')
 
