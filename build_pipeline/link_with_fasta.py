@@ -134,7 +134,7 @@ for index, row in gene_file.iterrows():
             no_uniprot.append(row)
         if row['evidence'] == 5:
             PE5.append(row)
-        if row['reviewed'] == False:
+        if row['entry_type'] == False:
             unreviewed += 1
 
 print("\nNumber of GENCODE genes not in FASTA", len(noCDS))

@@ -4,7 +4,7 @@ import requests
 from Bio import SeqIO
 
 def to_fasta(row):
-    return f">{row['UniProtKB ID']}|{row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+    return f">{row['UniProtKB ID']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
 
 gene_file = "sequence_table.xlsx"
 gene_df = pd.read_excel(gene_file)
@@ -37,7 +37,8 @@ for index, row in gene_df.iterrows():
 		gene_df.at[index, 'sequence'] = gene_dict[row['UniProtKB ID']]
 	elif row['sequence'] == "MJA" and not row['UniProtKB ID'] in gene_dict:
 		print("Not present:", row['Gene ID'], row['Gene Symbol'])
-
+print("Writing FASTA file")
 with open('coding_genes.fasta', 'w') as f:
     f.write(''.join(gene_df.apply(to_fasta, axis=1)))
-print("Fasta file made: coding_genes.fasta")
+print("File written as coding_genes.fasta")
+
