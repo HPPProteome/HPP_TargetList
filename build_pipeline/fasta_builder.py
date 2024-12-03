@@ -3,6 +3,7 @@ import os
 import requests
 from Bio import SeqIO
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
+import sys
 
 def to_fasta(row):
     return f">{row['UniProtKB ID']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
@@ -12,18 +13,31 @@ gene_df = pd.read_excel(gene_file)
 
 #Uniprot sequences are taken if Gencode ones do not exist 
 uniprot_fasta = 'uniprot.fa'
+print("Searching for Uniprot Fasta file")
 if not os.path.exists(uniprot_fasta):
+
 	print("Downloading uniprot fasta file for needed sequences")
 	url = "https://rest.uniprot.org/uniprotkb/stream?format=fasta&query=%28organism_id%3A9606%29"
-	response = requests.get(url)
-
-	if response.status_code == 200:
-		with open('uniprot.fa', 'w') as file:
-			file.write(response.text)
-		print("FASTA file saved as uniprot.fa")
-	else:
-		print("Failed to download the file.")
-
+	attempt = 0
+	max_attempt = 3
+	
+	while attempt < max_attempt:
+		try:
+			response = requests.get(url, stream=True, timeout=10)
+			response.raise_for_status()
+			if response.status_code == 200:
+				with open('uniprot.fa', 'w') as file:
+					file.write(response.text)
+				print("FASTA file saved as uniprot.fa")
+				break
+		except requests.exceptions.Timeout:
+			attempt += 1
+			print(f"Request to download file timed out, trying again {attempt}/{max_attempt}")
+		except requests.exceptions.RequestException as e:
+			print("An error occured:", e)
+			sys.exit("Exiting program")
+else:
+	print("File found")
 gene_dict = {}
 
 for record in SeqIO.parse(uniprot_fasta, "fasta"):
