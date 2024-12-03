@@ -5,6 +5,7 @@ import requests
 import shutil
 import gzip
 import subprocess
+import sys
 
 version = 47 #Needs to be changed when version updates
 
@@ -13,7 +14,6 @@ gene_file = "atlasLink.xlsx"
 
 if not os.path.exists(gene_file):
 	print(f"{gene_file} file not found, running update_PE.py")
-	
 	try:
 		subprocess.run(['python3', 'update_PE.py'], check=True)
 	except subprocess.CalledProcessError as e:
@@ -28,22 +28,42 @@ gene_file['CDS'] = gene_file['CDS'].astype(str)
 if os.path.exists(fasta_file):
         print("GENCODE FASTA File Found")
 else:
+       
         print("Downloading gencode", fasta_file)
         url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.pc_translations.fa.gz"
         output_gz_file = "gencode.pc_translations.gtf.gz"
         output_gtf_file = "gencode.pc_translations.fa"
-
+        attempt = 0
+        max_attempt = 3
         print("Downloading", url)
-        response = requests.get(url, stream=True)
-        with open(output_gz_file, 'wb') as f:
-                f.write(response.content)
-        print("Downloaded", output_gz_file)
 
-        print("Unzipping", output_gz_file, "to", output_gtf_file)
-        with gzip.open(output_gz_file, 'rb') as f_in:
-                with open(output_gtf_file, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-        print("Unzipped")
+        while attempt < max_attempt:
+            
+            try:
+                response = requests.get(url, stream=True, timeout=10)
+                response.raise_for_status()
+                with open(output_gz_file, 'wb') as f:
+                        f.write(response.content)
+                print("Downloaded", output_gz_file)
+                break
+            except requests.exceptions.Timeout:
+                attempt += 1
+                print(f"Request timed out, trying again {attempt}/{max_attempt}")
+
+            except requests.exceptions.RequestException as e:
+                print("File not downloaded, error:", e)
+                break
+        
+        if attempt == max_attempt:
+            print("File not downloaded, request timed out too many times.")
+            sys.exit("Exiting program")
+
+        else:
+            print("Unzipping", output_gz_file, "to", output_gtf_file)
+            with gzip.open(output_gz_file, 'rb') as f_in:
+                     with open(output_gtf_file, 'wb') as f_out:
+                             shutil.copyfileobj(f_in, f_out)
+            print("Unzipped")
 
 
 genes_dict = {}
@@ -118,7 +138,7 @@ for index, row in gene_file.iterrows(): #Takes highest CDS length for any genes 
 		gene_file.at[index, 'ENST'] = ensg_dict[row['gene_id']]['ensts'][highest_index]
 		gene_file.at[index, 'ENSP'] = ensg_dict[row['gene_id']]['ensps'][highest_index]
 		gene_file.at[index, 'sequence'] = ensg_dict[row['gene_id']]['sequences'][highest_index]
-
+	
 
 noCDS = []
 no_uniprot = []
@@ -153,7 +173,7 @@ columns_to_export = [
     'CDS', 'ENSP', 'ENST',
     'uniprot_id', 'entry_type', 'Reviewed Entry Available', 'entry_name', 'gene_symbol', 'description',
     'protein length', 'evidence', 'Suggested PE', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 'found_with', 'isoform', 'Difference in lengths', 
-    'EC Number', 'Num Transmembrane Regions', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'sequence']
+    'EC Number', 'Num Transmembrane Regions', 'Signal Peptide', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'sequence']
 
 gene_file_selected = gene_file[columns_to_export]
 
@@ -163,7 +183,7 @@ gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(bool)
 
 gene_file_selected['Num Transmembrane Regions'] = pd.to_numeric(gene_file_selected['Num Transmembrane Regions'], errors='coerce')
 gene_file_selected['Num Transmembrane Regions'] = gene_file_selected['Num Transmembrane Regions'].fillna(0).astype(int).replace(0, pd.NA)
-
+gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].replace("['None']", pd.NA) 
 
 #Creates Exception files
 #No uniprot entries

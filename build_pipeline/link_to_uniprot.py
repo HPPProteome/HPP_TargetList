@@ -4,6 +4,7 @@ import shutil
 import gzip
 import pandas as pd
 import subprocess
+import sys
 
 #Coverts the protien existance to a numrical figure
 def level_converter(description):
@@ -65,8 +66,18 @@ def transmem_counter(s):
 	else:
 		return s
 
-
-
+#Isolates the n..n part of signal peptides
+#SIGNAL 1..22; /evidence="ECO:0000255 --> 1..22
+import re
+def IsolateSignal(s):
+	if not isinstance(s, float):
+		num = re.search(r"\d+\.\.\d+", s)
+		if num:
+			return num.group()
+		else:
+			return None
+	else:
+		return None
 file = "uniprot.tsv"
 gene_file = "coding_protiens.xlsx"
 
@@ -81,29 +92,46 @@ if not os.path.exists(gene_file):
 print("Looking for uniprot gene file")
 if os.path.exists(file):
         print("TSV  File Found")
+
 else:
         print("Downloading gencode.v46.pc_translations.fa")
-        url = "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Clength%2Cprotein_existence%2Cxref_ensembl_full%2Cid%2Cgene_names%2Cprotein_name%2Cec%2Cft_transmem&format=tsv&query=%28organism_id%3A9606%29"
+        url = "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Clength%2Cprotein_existence%2Cxref_ensembl_full%2Cid%2Cgene_names%2Cprotein_name%2Cft_transmem%2Cec%2Cft_signal&format=tsv&query=%28organism_id%3A9606%29"
         output_gz_file = "uni_prot.tsv.gz"
         output_tsv_file = "uniprot.tsv"
         print("Downloading", url)
-        response = requests.get(url, stream=True)
-        with open(output_gz_file, 'wb') as f:
-                f.write(response.content)
-        print("Downloaded", output_gz_file)
+        attempt = 0
+        max_attempt = 3
 
-        print("Unzipping", output_gz_file, "to", output_tsv_file)
-        with gzip.open(output_gz_file, 'rb') as f_in:
-                with open(output_tsv_file, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-        print("Unzipped")
+        while attempt < max_attempt:
+                try:
+                        response = requests.get(url, stream=True, timeout=10)
+                        response.raise_for_status()
+                        with open(output_gz_file, 'wb') as f:
+                                f.write(response.content)
+                        print("Downloaded", output_gz_file)
+                        break
+                except requests.exceptions.Timeout:
+                        attempt += 1
+                        print(f"Request timed out, trying again: {attempt}/{max_attempt}")
+                except requests.exceptions.RequestException as e:
+                        print("Error", e)
+                        break
+        if attempt == max_attempt:
+                print("Attempt to download file timed out too many times. File not downloaded")
+                sys.exit("Exiting Program")
+        else:
+                print("Unzipping", output_gz_file, "to", output_tsv_file)
+                with gzip.open(output_gz_file, 'rb') as f_in:
+                        with open(output_tsv_file, 'wb') as f_out:
+                                shutil.copyfileobj(f_in, f_out)
+                print("Unzipped")
 
 gene_df = pd.read_excel(gene_file)
 id_list = gene_df['gene_id'].tolist()
 name_list = gene_df['gene_name'].tolist()
 gene_dict = {}
 for i in range(len(id_list)):
-	gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[]}
+	gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[]}
 print(len(gene_dict))
 
 
@@ -111,8 +139,11 @@ all_gene = pd.read_csv(file, sep='\t')
 all_gene['Protein existence'] = all_gene['Protein existence'].apply(level_converter)
 all_gene['Reviewed'] = all_gene['Reviewed'].apply(reviewed)
 all_gene['Transmembrane'] = all_gene['Transmembrane'].apply(transmem_counter)
-
+all_gene['Signal peptide'] = all_gene['Signal peptide'].apply(IsolateSignal)
 print("Making connections with gene ids")
+
+#Has correct UniprotKB ID and the ENSG Number
+exceptions_dict = {"Q6UXT6":"ENSG00000228336"}
 
 count = 0
 extra = 0
@@ -136,6 +167,8 @@ for index, row in all_gene.iterrows():
 
                         gene_dict[gene]['EC Number'].append(row["EC number"])
                         gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])   
+                        gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+
                         count +=1
 		elif gene in gene_dict and True not in gene_dict[gene]['reviewed']:
                         gene_dict[gene]['reviewed'].append(row['Reviewed'])
@@ -152,7 +185,25 @@ for index, row in all_gene.iterrows():
                         gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
                         gene_dict[gene]['EC Number'].append(row["EC number"])
                         gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
+                        gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
 
+	if row['Entry'] in exceptions_dict:
+                gene = exceptions_dict[row['Entry']]
+                gene_dict[gene]['reviewed'].append(row['Reviewed'])
+                gene_dict[gene]['entry_name'].append(row['Entry Name'])
+                gene_dict[gene]['uniprot_id'].append(row['Entry'])
+                gene_dict[gene]['description'].append(row['Protein names'])
+                gene_dict[gene]['protein length'].append(row['Length'])
+                gene_dict[gene]['gene_symbol'].append(row['Gene Names'])
+                gene_dict[gene]['found_with'].append("gene_id")
+                gene_dict[gene]['evidence'].append(row['Protein existence'])
+                gene_dict[gene]['entry_type'].append(row['Reviewed'])
+                gene_dict[gene]['ENSP'].append(None)
+                gene_dict[gene]['ENST'].append(None) 
+                gene_dict[gene]['isoform'].append(None)
+                gene_dict[gene]['EC Number'].append(row["EC number"])
+                gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
+                gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
 
 print("Making connections with gene symbols")
 gene_symbols_dict = {}
@@ -165,6 +216,7 @@ for index, row in all_gene.iterrows():
 	for name in ids:
 		if name.strip() in gene_symbols_dict:
                         ensg = gene_symbols_dict[name.strip()]
+
                         if gene_dict[ensg]['found_with'] == [] or (True not in gene_dict[ensg]['reviewed'] and row['Reviewed']): 
                                     #print(gene_dict[i]['gencode_symbol'], ids)
                                     gene_dict[ensg]['entry_name'].append(row['Entry Name'])
@@ -184,9 +236,8 @@ for index, row in all_gene.iterrows():
                                     gene_dict[ensg]['ENSP'].append(None)
                                     gene_dict[ensg]['ENST'].append(None)
                                     gene_dict[ensg]['isoform'].append(None)
-                                    
+                                    gene_dict[ensg]['Signal Peptide'].append(row["Signal peptide"])
                                     symbol_count += 1 
-
 
 
 
@@ -207,7 +258,7 @@ print("Num empty", not_found)
 
 print(len(gene_dict))
 
-print("Making Frame")
+print("Making Frame uniprot_output.xlsx")
 final_frame = pd.DataFrame(gene_dict).T
 
 gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 

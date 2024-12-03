@@ -3,7 +3,7 @@ import requests
 import zipfile
 import pandas as pd
 import subprocess
-
+import sys
 
 gene_file = "cleaned_table.xlsx"
 rna_file = "rna_tissue_consensus.tsv"
@@ -12,20 +12,37 @@ print("Looking for RNA_expression file")
 if os.path.exists(rna_file):
     print("RNA expressions File Found")
 else:
+    
     print("Downloading", rna_file)
     url = "https://www.proteinatlas.org/download/tsv/rna_tissue_consensus.tsv.zip"
     output_zip_file = "rna_tissue_consensus.tsv.zip"
 
     print("Downloading", url)
-    response = requests.get(url, stream=True)
-    with open(output_zip_file, 'wb') as f:
-        f.write(response.content)
-    print("Downloaded", output_zip_file)
+    attempt = 0
+    max_attempt = 3
+    while attempt < max_attempt:
+    
+        try:
+            response = requests.get(url, stream=True, timeout=10)
+            with open(output_zip_file, 'wb') as f:
+                f.write(response.content)
+            print("Downloaded", output_zip_file)
+            break
+        except requests.exceptions.Timeout:
+            attempt += 1
+            print(f"Request timed out, trying again {attempt}/{max_attempt}")
+        except requests.exceptions.RequestException as e:
+            print("Error occured:", e)
+            break
 
-    print("Unzipping", output_zip_file, "to", rna_file)
-    with zipfile.ZipFile(output_zip_file, 'r') as zip_ref:
-        zip_ref.extractall(".")
-    print("Unzipped")
+    if attempt == max_attempt:
+        print("File failed to download")
+        sys.exit("Exiting Program")
+    else:
+        print("Unzipping", output_zip_file, "to", rna_file)
+        with zipfile.ZipFile(output_zip_file, 'r') as zip_ref:
+            zip_ref.extractall(".")
+        print("Unzipped")
 
 
 if not os.path.exists(gene_file):

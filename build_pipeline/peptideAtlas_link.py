@@ -2,24 +2,37 @@ import requests
 import os
 import pandas as pd
 import subprocess
+import sys
 
 url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping/query_zsun_20241030-091733-695.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_zsun_20241030-091733-695&rs_page_size=1000000&output_mode=tsv"
 
 atlas_file = "peptideAtlas.tsv"
 gene_file = "updatedPE.xlsx"
-
+attempt = 0
+max_attempt = 3
 if not os.path.exists(atlas_file):
-    try:
-        print("Downloading data from Peptide Atlas")
-        response = requests.get(url)
-        response.raise_for_status()
+    while attempt < max_attempt:
+        try:
+            print("Downloading data from Peptide Atlas")
+            response = requests.get(url, stream=True, timeout=10)
+            response.raise_for_status()
     
-        with open(atlas_file, "wb") as file:
-            file.write(response.content)
+            with open(atlas_file, "wb") as file:
+                file.write(response.content)
     
-        print(f"File downloaded and saved as {atlas_file}")
-    except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+            print(f"File downloaded and saved as {atlas_file}")
+            break
+
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred: {e}")
+
+        except requests.exceptions.Timeout:
+            attempt += 1
+            print(f"Request Timed Out, trying again {attempt}/{max_attempt}")
+    if max_attempt == attempt:
+        print("Failed to download file")
+        sys.exit("Exiting program")
+
 else:
     print("Peptide Atlas file found")
 

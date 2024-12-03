@@ -4,7 +4,7 @@ import os
 import requests
 import shutil
 import gzip
-
+import sys
 
 version = 47 #Change for formating
 
@@ -22,15 +22,32 @@ else:
 	output_gtf_file = "gencode.annotation.gtf"
 
 	print("Downloading", url)
-	response = requests.get(url, stream=True)
-	with open(output_gz_file, 'wb') as f:
-		f.write(response.content)
-	print("Downloaded", output_gz_file)
+	max_attempt = 3
+	attempt = 0
+	while attempt < max_attempt:
+		try:
+			response = requests.get(url, stream=True, timeout=15)
+			response.raise_for_status()
 
-	print("Unzipping", output_gz_file, "to", output_gtf_file)
-	with gzip.open(output_gz_file, 'rb') as f_in:
-		with open(output_gtf_file, 'wb') as f_out:
-			shutil.copyfileobj(f_in, f_out)
+			with open(output_gz_file, 'wb') as f:
+				f.write(response.content)
+			print("Downloaded", output_gz_file)
+			break
+		except requests.exceptions.Timeout:
+			attempt += 1
+			print(f"Attempt to download timed out, retrying {attempt}/{max_attempt}")
+		except requests.exceptions.RequestException as e:
+			print("An error occured", e) 
+			break
+	if attempt == max_attempt:
+		print(f"Failed to download file after {attempt} attempts")
+		sys.exit("Stopping the program.")
+	
+	else:
+		print("Unzipping", output_gz_file, "to", output_gtf_file)
+		with gzip.open(output_gz_file, 'rb') as f_in:
+			with open(output_gtf_file, 'wb') as f_out:
+				shutil.copyfileobj(f_in, f_out)
 	print("Unzipped")
 
 def parse_attr(attr_str):
@@ -55,16 +72,18 @@ print("GTF file read")
 
 unexcepted_tags = ['readthrough_transcript', 'EnsEMBL_merge_exception', 'readthrough_gene', 'exp_conf', 'RNA_Seq_supported_only']
 unexcepted_trans_type = ['nonsense_mediated_decay', 'protein_coding_CDS_not_defined', 'retained_intron', 'TEC']
-
+gene_num = 0
 gtf_df = gtf_df[gtf_df['feature'].isin(['gene','transcript']) ]
-
+gene_counter = 0
 print("Searching for coding genes")
 coding_gene = {}
 for index, row in gtf_df.iterrows():
 	if row["feature"] == 'gene':
+		gene_num += 1
 		row['attribute'] = parse_attr(row['attribute'])
 		gene_type = row['attribute'].get('gene_type', 'N/A')[0]
 		if gene_type == 'protein_coding':
+			gene_counter += 1
 			gene_id = row['attribute'].get('gene_id', 'N/A')[0].split('.')[0]
 			gene_name = row['attribute'].get('gene_name', 'N/A')[0]
 			chrom = row['chrom'][3:]
@@ -74,7 +93,8 @@ for index, row in gtf_df.iterrows():
 			if trans_type not in unexcepted_trans_type:
 				if 'readthrough_gene' not in tag:
 					coding_gene[gene_id] = {"gene_id": gene_id, "gene_name":gene_name, "chrom": chrom, "start": start, "end": end, "trans_id": None, "transl_type": None, "transl_id": None, "CDS": None}
-
+print(f"There are {gene_num} genes in GENCODE")
+print(f"There are {gene_counter} genes with protien coding tag")
 print(f"There are {len(coding_gene)} protien coding genes") 
 print("Adding translation ids and translation types")
 #Add transl id, deal with overwritting of tags for diff type so overwrting key/value
