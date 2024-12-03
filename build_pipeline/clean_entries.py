@@ -21,7 +21,7 @@ gene_data = pd.read_excel("uniprot_output.xlsx")
 gene_data = gene_data.iloc[:,2:]
 gene_data.columns = gene_data.columns.str.strip()
 
-columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'found_with', 'evidence', 'ENSP', 'ENST', 'isoform', 'Num Transmembrane Regions', 'EC Number']
+columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'found_with', 'evidence', 'ENSP', 'ENST', 'isoform', 'Num Transmembrane Regions', 'EC Number', 'Signal Peptide']
 
 for i in columns:
 	gene_data[i] = gene_data[i].apply(makeList)
@@ -51,7 +51,7 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'Num Transmembrane Regions'] = [row['Num Transmembrane Regions'][i] for i in range(len(found_right)) if found_right[i]]
 		gene_data.at[index, 'EC Number'] = [row['EC Number'][i] for i in range(len(found_right)) if found_right[i]]
 		gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(found_right)) if found_right[i]]
-		
+		gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(found_right)) if found_right[i]]
 		for i in range(len(found_type)):
 			if row['found_with'][i].strip()  == "gene_name" and row['entry_type'][i].strip():
 				strange_genes.append({col: row[col][i] for col in row.index if isinstance(row[col], list)})
@@ -100,7 +100,9 @@ for index, row in gene_data.iterrows():
 
         gene_data.at[index, 'Num Transmembrane Regions'] = [row['Num Transmembrane Regions'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
         gene_data.at[index, 'EC Number'] = [row['EC Number'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
-        gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]       
+        gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+        gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+       
 #Makes sure that only the highest level of exsistance protiens are kept
 for index, row in gene_data.iterrows():
 	if len(row['evidence']) > 1:
@@ -125,7 +127,7 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'EC Number'] = [row['EC Number'][i].strip() for i in range(len(keeper)) if keeper[i]]
 		gene_data.at[index, 'Num Transmembrane Regions'] = [row['Num Transmembrane Regions'][i].strip() for i in range(len(keeper)) if keeper[i]]
 		gene_data.at[index, 'found_with'] = [row['found_with'][i].strip() for i in range(len(keeper)) if keeper[i]]
-
+		gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i].strip() for i in range(len(keeper)) if keeper[i]]
 #Manually Assigns the correct UniProt ID to 9 protiens
 manual_file = "manualFix.tsv"
 
@@ -156,7 +158,7 @@ for index, row in gene_data.iterrows():
                 gene_data.at[index, 'EC Number'] = row['EC Number'][i]
                 gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
                 gene_data.at[index, 'found_with'] = row['found_with'][i]
-
+                gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
 
 
 
@@ -187,7 +189,7 @@ for index, row in gene_data.iterrows():
 				gene_data.at[index, 'EC Number'] = row['EC Number'][i]
 				gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
 				gene_data.at[index, 'found_with'] = row['found_with'][i]
-
+				gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
 
 
 
@@ -212,6 +214,7 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'EC Number'] = row['EC Number'][0]
                     gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][0]
                     gene_data.at[index, 'found_with'] = row['found_with'][0]
+                    gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
 print("Number of repeats:", repeats)
 
 #Chooses highest CDS length when muiltiple 
@@ -237,11 +240,12 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'EC Number'] = row['EC Number'][i]
 		gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
 		gene_data.at[index, 'found_with'] = row['found_with'][i]
+		gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
 
 gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 
     "transl_id", "CDS", "gencode_symbol", "ENSP", "ENST", "uniprot_id", 
     "reviewed", "entry_name", "gene_symbol", "description", "protein length", 
-    "entry_type", "evidence", "found_with", "isoform", "EC Number", "Num Transmembrane Regions"]
+    "entry_type", "evidence", "found_with", "isoform", "EC Number", "Num Transmembrane Regions", "Signal Peptide"]
 
 #Cleans data that is no longer a list
 for index, row in gene_data.iterrows():
@@ -258,7 +262,7 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'EC Number'] = row['EC Number'][0]
                     gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][0]
                     gene_data.at[index, 'found_with'] = row['found_with'][0]
-
+                    gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
                     if row['isoform'][0] != None and not row['isoform'][0].startswith("ENSG"):
                         gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                     else:
