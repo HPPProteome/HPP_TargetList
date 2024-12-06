@@ -50,8 +50,7 @@ python RUN_ME.py
 
 # Link_to_fasta:
 -	Downloads the newest version of GENCODE’s Protein-coding transcript translation sequences FASTA file and unzips it into gencode.pc_translatioan.fa and atlasLink.xlsx from peptideAtlas_link.py and links the UniProtKB ENSP numbers with the GENCODE FASTA file to get GENCODE CDS length. Gene symbols are used when a ENSP is not present.
--	Outputs: Supplimental_table_1_v47.xlsx, which is the most complete table.
--	Also outputs: No_Uniprot_Entry.xlsx, which is a collection of GENCODE entries with no corrosponding UniProt ID. No_Fasta_entry.xlsx, which is a list of all GENCODE proteins in the GTF file but not in the FASTA file. Identical_UniProtKB_entries.xlsx, which is a list of all ENSG numbers that point to the same UniProt ID. PE5_Protiens.xlsx, which is a list of all proteins with a UniProtKB PE score of 5. Sequence_table.xlsx, which is Supplimental_table_1_v47.xlsx, except it includes the genes with their amino acid sequences; if a gene sequence is not present in the GENCODE FASTA file the sequence MJA is included instead.
+-	Outputs: No_Uniprot_Entry.xlsx, which is a collection of GENCODE entries with no corrosponding UniProt ID. No_Fasta_entry.xlsx, which is a list of all GENCODE proteins in the GTF file but not in the FASTA file. Identical_UniProtKB_entries.xlsx, which is a list of all ENSG numbers that point to the same UniProt ID. PE5_Protiens.xlsx, which is a list of all proteins with a UniProtKB PE score of 5. Sequence_table.xlsx, which is the table of all genes with their information and amino acid sequences; if an amino acid sequence is not present in the GENCODE FASTA file the sequence MJA is written instead.
 
 # Fasta_builder.py
 - Takes in sequence_table.xlsx and downloads the UniProtKB FASTA file for all genes.
@@ -60,6 +59,8 @@ python RUN_ME.py
 - Format: >Uniprot ID ENSP|sequence length|Description|Entry Name|Gene Symbol
   Sequence
 - Output: coding_genes.fasta
+- Uses collected sequences to calculate the PI score and Hydrophobicity of each gene and appends it to the main table taken from sequences.
+- Outputs: Supplemental_table_1.xlsx, which is the most up to date table of all genes and their collected information; excludes amino acid sequences.
 
 # RUN_ME.py:
 -	Runs all scripts in order: protein_list_builder.py > link_to_uniprot.py > manual_fix_list_maker.py > clean_entries.py > update_PE.py > peptideAtlas_link.py > link_with_fasta > fasta_builder.py.
