@@ -16,11 +16,26 @@ def to_fasta(row):
     elif pd.isna(row['UniProtKB ID']):
         line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}||||{row['Gene Symbol']}\n{row["sequence"]}\n"
 
+    elif pd.isna(row['ENSP']) and row['UniProtKB ID'] in identifier_dict:
+        line = f">{row['Gene ID']} {row["ENSP"]}|{len(row["sequence"])}||||{row['Gene Symbol']}\n{row["sequence"]}\n"
+
     else:
         line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
     line = line.replace('nan|','|')
     return line
 
+def number(s):
+    try:
+        int(s)
+        return int(s)
+    except ValueError:
+        if s == "X":
+            return 23
+        elif s == "Y":
+            return 24
+        elif s == "M":
+            return 25
+ 
 gene_file = "sequence_table.xlsx"
 gene_df = pd.read_excel(gene_file)
 
@@ -62,7 +77,7 @@ for record in SeqIO.parse(uniprot_fasta, "fasta"):
 gene_df['Hydrophobicity'] = ''
 gene_df['PI'] = ''
 
-
+gene_df = gene_df.sort_values(by='UniProtKB ID', na_position='first')
 
 print("Calculating Hydrophobicity and PI")
 #Gets sequence if not present
@@ -91,6 +106,10 @@ print("File written as coding_genes.fasta")
 
 print("Making updated table")
 
+gene_df['Chromosome'] = gene_df['Chromosome'].apply(number)
+gene_df = gene_df.sort_values(by='Chromosome', ascending=True)
+gene_df['Chromosome'] = gene_df['Chromosome'].replace(25, "M").replace(24,"Y").replace(23, "X")
+
 gene_df.drop('sequence', axis=1, inplace=True)
-gene_df.to_excel("Updated_Sup_table.xlsx")
+gene_df.to_excel("Supplemental_table_1.xlsx", index=False)
 print("Done")
