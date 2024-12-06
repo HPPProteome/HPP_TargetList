@@ -203,11 +203,12 @@ PE5_df = pd.DataFrame(PE5, columns=columns_to_export)
 print("Number of PE 5 proteins:", PE5_df.shape[0])
 print("Making Frames")
 
+#Creates table to hold sequences
 noUniprot_df.to_excel("No_Uniprot_Entry.xlsx", index=False)
 gene_file_selected.to_excel("sequence_table.xlsx", index=False)
 
-gene_file_selected.drop('sequence', axis=1, inplace=True)
-gene_file_selected.to_excel(f"Supplemental_table_1_v{version}.xlsx", index=False)
+#gene_file_selected.drop('sequence', axis=1, inplace=True)
+#gene_file_selected.to_excel(f"Supplemental_table_1_v{version}.xlsx", index=False)
 
 noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
 duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
