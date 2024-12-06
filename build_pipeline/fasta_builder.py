@@ -5,8 +5,21 @@ from Bio import SeqIO
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import sys
 
+#Varable to hold all IDs
+
+identifier_dict = {}
+
 def to_fasta(row):
-    return f">{row['UniProtKB ID']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+    if row['UniProtKB ID'] not in identifier_dict and pd.notna(row['UniProtKB ID']):
+        line = f">{row['UniProtKB ID']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+        identifier_dict[row['UniProtKB ID']] = "Used"
+    elif pd.isna(row['UniProtKB ID']):
+        line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}||||{row['Gene Symbol']}\n{row["sequence"]}\n"
+
+    else:
+        line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+    line = line.replace('nan|','|')
+    return line
 
 gene_file = "sequence_table.xlsx"
 gene_df = pd.read_excel(gene_file)
