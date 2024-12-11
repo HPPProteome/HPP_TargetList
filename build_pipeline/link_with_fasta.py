@@ -32,7 +32,6 @@ else:
         print("Downloading gencode", fasta_file)
         url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.pc_translations.fa.gz"
         output_gz_file = "gencode.pc_translations.fa.gz"
-#        output_gtf_file = "gencode.pc_translations.fa"
         attempt = 0
         max_attempt = 3
         print("Downloading", url)
@@ -57,13 +56,6 @@ else:
         if attempt == max_attempt:
             print("File not downloaded, request timed out too many times.")
             sys.exit("Exiting program")
-
- #       else:
-  #          print("Unzipping", output_gz_file, "to", output_gtf_file)
-   #         with gzip.open(output_gz_file, 'rb') as f_in:
-    #                 with open(output_gtf_file, 'wb') as f_out:
-     #                        shutil.copyfileobj(f_in, f_out)
-      #      print("Unzipped")
 
 
 genes_dict = {}
