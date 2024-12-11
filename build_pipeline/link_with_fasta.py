@@ -9,7 +9,7 @@ import sys
 
 version = 47 #Needs to be changed when version updates
 
-fasta_file = "gencode.pc_translations.fa"
+fasta_file = "gencode.pc_translations.fa.gz"
 gene_file = "atlasLink.xlsx"
 
 if not os.path.exists(gene_file):
@@ -31,8 +31,8 @@ else:
        
         print("Downloading gencode", fasta_file)
         url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.pc_translations.fa.gz"
-        output_gz_file = "gencode.pc_translations.gtf.gz"
-        output_gtf_file = "gencode.pc_translations.fa"
+        output_gz_file = "gencode.pc_translations.fa.gz"
+#        output_gtf_file = "gencode.pc_translations.fa"
         attempt = 0
         max_attempt = 3
         print("Downloading", url)
@@ -58,43 +58,45 @@ else:
             print("File not downloaded, request timed out too many times.")
             sys.exit("Exiting program")
 
-        else:
-            print("Unzipping", output_gz_file, "to", output_gtf_file)
-            with gzip.open(output_gz_file, 'rb') as f_in:
-                     with open(output_gtf_file, 'wb') as f_out:
-                             shutil.copyfileobj(f_in, f_out)
-            print("Unzipped")
+ #       else:
+  #          print("Unzipping", output_gz_file, "to", output_gtf_file)
+   #         with gzip.open(output_gz_file, 'rb') as f_in:
+    #                 with open(output_gtf_file, 'wb') as f_out:
+     #                        shutil.copyfileobj(f_in, f_out)
+      #      print("Unzipped")
 
 
 genes_dict = {}
 symbols_dict = {}
 ensg_dict = {}
-for record in SeqIO.parse(fasta_file, "fasta"):
-    header_parts = record.description.split('|')
-    ensp_number = header_parts[0]
-    gene_symbol = header_parts[-2]
-    cds_length = header_parts[-1]
-    ensg_number = header_parts[2].split('.')[0]
-    enst_number = header_parts[1]
-    sequence = str(record.seq)
-    genes_dict[ensp_number] = {"CDS_length": cds_length, "gene_symbol": gene_symbol, "enst":enst_number, "sequences": sequence}
-    if gene_symbol not in symbols_dict:
-        symbols_dict[gene_symbol] = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": [], "sequences":[]}
+
+with gzip.open(fasta_file, "rt") as unzipped_fasta:
+    for record in SeqIO.parse(unzipped_fasta, "fasta"):
+        header_parts = record.description.split('|')
+        ensp_number = header_parts[0]
+        gene_symbol = header_parts[-2]
+        cds_length = header_parts[-1]
+        ensg_number = header_parts[2].split('.')[0]
+        enst_number = header_parts[1]
+        sequence = str(record.seq)
+        genes_dict[ensp_number] = {"CDS_length": cds_length, "gene_symbol": gene_symbol, "enst":enst_number, "sequences": sequence}
+        if gene_symbol not in symbols_dict:
+            symbols_dict[gene_symbol] = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": [], "sequences":[]}
     
-    symbols_dict[gene_symbol]["CDS_lengths"].append(cds_length)
-    symbols_dict[gene_symbol]["ensts"].append(enst_number)
-    symbols_dict[gene_symbol]["ensps"].append(ensp_number)
-    symbols_dict[gene_symbol]['gene_symbols'].append(gene_symbol)
-    symbols_dict[gene_symbol]['sequences'].append(sequence)    
+        symbols_dict[gene_symbol]["CDS_lengths"].append(cds_length)
+        symbols_dict[gene_symbol]["ensts"].append(enst_number)
+        symbols_dict[gene_symbol]["ensps"].append(ensp_number)
+        symbols_dict[gene_symbol]['gene_symbols'].append(gene_symbol)
+        symbols_dict[gene_symbol]['sequences'].append(sequence)    
 
-    if ensg_number not in ensg_dict:
-        ensg_dict[ensg_number]  = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": [], "sequences":[]}
+        if ensg_number not in ensg_dict:
+            ensg_dict[ensg_number]  = {"CDS_lengths": [],"ensts": [],"ensps": [], "gene_symbols": [], "sequences":[]}
 
-    ensg_dict[ensg_number]["CDS_lengths"].append(cds_length)
-    ensg_dict[ensg_number]["ensts"].append(enst_number)
-    ensg_dict[ensg_number]["ensps"].append(ensp_number)
-    ensg_dict[ensg_number]['gene_symbols'].append(gene_symbol)
-    ensg_dict[ensg_number]['sequences'].append(sequence) 
+        ensg_dict[ensg_number]["CDS_lengths"].append(cds_length)
+        ensg_dict[ensg_number]["ensts"].append(enst_number)
+        ensg_dict[ensg_number]["ensps"].append(ensp_number)
+        ensg_dict[ensg_number]['gene_symbols'].append(gene_symbol)
+        ensg_dict[ensg_number]['sequences'].append(sequence) 
   
 gene_file['sequence'] = ''
 for index, row in gene_file.iterrows():

@@ -78,7 +78,7 @@ def IsolateSignal(s):
 			return None
 	else:
 		return None
-file = "uniprot.tsv"
+file = "uniprot.tsv.gz"
 gene_file = "coding_protiens.xlsx"
 
 if not os.path.exists(gene_file):
@@ -94,10 +94,10 @@ if os.path.exists(file):
         print("TSV  File Found")
 
 else:
-        print("Downloading gencode.v46.pc_translations.fa")
+        print(f"Downloading {file}")
         url = "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Clength%2Cprotein_existence%2Cxref_ensembl_full%2Cid%2Cgene_names%2Cprotein_name%2Cft_transmem%2Cec%2Cft_signal&format=tsv&query=%28organism_id%3A9606%29"
-        output_gz_file = "uni_prot.tsv.gz"
-        output_tsv_file = "uniprot.tsv"
+        output_gz_file = "uniprot.tsv.gz"
+        #output_tsv_file = "uniprot.tsv"
         print("Downloading", url)
         attempt = 0
         max_attempt = 3
@@ -119,12 +119,12 @@ else:
         if attempt == max_attempt:
                 print("Attempt to download file timed out too many times. File not downloaded")
                 sys.exit("Exiting Program")
-        else:
-                print("Unzipping", output_gz_file, "to", output_tsv_file)
-                with gzip.open(output_gz_file, 'rb') as f_in:
-                        with open(output_tsv_file, 'wb') as f_out:
-                                shutil.copyfileobj(f_in, f_out)
-                print("Unzipped")
+#        else:
+ #               print("Unzipping", output_gz_file, "to", output_tsv_file)
+  #              with gzip.open(output_gz_file, 'rb') as f_in:
+   #                     with open(output_tsv_file, 'wb') as f_out:
+    #                            shutil.copyfileobj(f_in, f_out)
+     #           print("Unzipped")
 
 gene_df = pd.read_excel(gene_file)
 id_list = gene_df['gene_id'].tolist()
@@ -136,6 +136,8 @@ print(len(gene_dict))
 
 
 all_gene = pd.read_csv(file, sep='\t')
+
+
 all_gene['Protein existence'] = all_gene['Protein existence'].apply(level_converter)
 all_gene['Reviewed'] = all_gene['Reviewed'].apply(reviewed)
 all_gene['Transmembrane'] = all_gene['Transmembrane'].apply(transmem_counter)

@@ -3,12 +3,11 @@ import pandas as pd
 import os 
 import requests
 import shutil
-import gzip
 import sys
 
 version = 47 #Change for formating
 
-gtf_file = "gencode.annotation.gtf"
+gtf_file = "gencode.annotation.gtf.gz"
 
 
 #Checks for and downloads file
@@ -19,7 +18,6 @@ else:
 	print("Downloading", gtf_file, "version", version)
 	url = f"https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{version}/gencode.v{version}.annotation.gtf.gz"
 	output_gz_file = "gencode.annotation.gtf.gz"
-	output_gtf_file = "gencode.annotation.gtf"
 
 	print("Downloading", url)
 	max_attempt = 3
@@ -43,12 +41,6 @@ else:
 		print(f"Failed to download file after {attempt} attempts")
 		sys.exit("Stopping the program.")
 	
-	else:
-		print("Unzipping", output_gz_file, "to", output_gtf_file)
-		with gzip.open(output_gz_file, 'rb') as f_in:
-			with open(output_gtf_file, 'wb') as f_out:
-				shutil.copyfileobj(f_in, f_out)
-	print("Unzipped")
 
 def parse_attr(attr_str):
 	attr = {}
@@ -118,6 +110,5 @@ for i, row in gtf_df.iterrows():
 
 print("Making Frame")
 final_frame = pd.DataFrame(coding_gene).T
-
-print(final_frame.head)
 final_frame.to_excel("coding_protiens.xlsx") 
+print("Done")
