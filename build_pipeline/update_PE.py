@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 gene_file = "cleaned_table.xlsx"
-rna_file = "rna_tissue_consensus.tsv"
+rna_file = "rna_tissue_consensus.tsv.zip"
 
 print("Looking for RNA_expression file")
 if os.path.exists(rna_file):
@@ -38,11 +38,6 @@ else:
     if attempt == max_attempt:
         print("File failed to download")
         sys.exit("Exiting Program")
-    else:
-        print("Unzipping", output_zip_file, "to", rna_file)
-        with zipfile.ZipFile(output_zip_file, 'r') as zip_ref:
-            zip_ref.extractall(".")
-        print("Unzipped")
 
 
 if not os.path.exists(gene_file):
@@ -54,7 +49,10 @@ if not os.path.exists(gene_file):
 
 
 
-rna_data = pd.read_csv(rna_file, sep='\t')
+
+rna_data = pd.read_csv('rna_tissue_consensus.tsv.zip',compression='zip', sep='\t')
+
+
 gene_data = pd.read_excel(gene_file)
 
 threshold = 1 #change to be lower or higher
