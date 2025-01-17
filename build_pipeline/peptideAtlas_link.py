@@ -1,17 +1,21 @@
+#Libraries
 import requests
 import os
 import pandas as pd
 import subprocess
 import sys
 
+#Peptide atlas file used
 url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping/query_zsun_20241030-091733-695.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_zsun_20241030-091733-695&rs_page_size=1000000&output_mode=tsv"
 
 atlas_file = "peptideAtlas.tsv"
 gene_file = "updatedPE.xlsx"
 
+#Secound peptide atlas file used
 backUp_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins/query_guest_20241206-152057-243.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_guest_20241206-152057-243&rs_page_size=1000000&output_mode=tsv"
 backUp_atlas_file = "Secoundary_peptideAtlas.tsv"
 
+#Downloads files if not present
 attempt = 0
 max_attempt = 3
 if not os.path.exists(atlas_file):
@@ -69,7 +73,7 @@ else:
     print("Secoundary Atlas file found")
 	
 
-
+#builds updatedPE.xlsx if not availible
 if not os.path.exists(gene_file):
 	print(f"Can't find {gene_file}, running update_PE.py")
 	try:
@@ -78,6 +82,7 @@ if not os.path.exists(gene_file):
 		print(f"Error while running update_PE.py: {e}")
 print(f"{gene_file} found")
 
+#Reads data into frames
 gene_df = pd.read_excel("updatedPE.xlsx")
 atlas_df = pd.read_csv(atlas_file, sep='\t')
 secound_atlas_df = pd.read_csv(backUp_atlas_file, sep='\t', low_memory=False)
@@ -94,12 +99,13 @@ for index, row in secound_atlas_df.iterrows():
 
 
 
-#Set up needed columns
+#Sets up needed columns
 gene_df['PeptideAtlas Category'] = ''
 gene_df['Observed'] = ''
 gene_df['Distinct'] = ''
 gene_df['Uniquely Mapping'] = ''
 
+#Collects data from peptide Atlas
 notIn = 0
 mismatch = 0
 secound_dict = 0
@@ -114,7 +120,7 @@ for index, row in gene_df.iterrows():
 		
 		if atlas_dict[gene]['uniprot'] != row['uniprot_id']:
 			mismatch += 1
-	elif id in secound_atlas_dict:
+	elif id in secound_atlas_dict: #Trys secoundary file, if gene is not in first
 		secound_dict += 1
 		gene_df.at[index, 'PeptideAtlas Category'] = secound_atlas_dict[id]['catagory']
 		gene_df.at[index, 'Observed'] = secound_atlas_dict[id]['observed']
@@ -127,7 +133,7 @@ print(f"There are {mismatch} mismatched uniprot IDs")
 print(f"There are {secound_dict} genes found in the secoundary atlas file")
 
 print(f"There are {notIn} genes not in Peptide Atlas")
-print("Making Frame")
+print("Making Frame: atlasLink.xlsx")
 gene_df.to_excel("atlasLink.xlsx")
 print("done")
 

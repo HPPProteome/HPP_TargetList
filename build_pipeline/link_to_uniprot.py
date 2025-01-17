@@ -1,9 +1,11 @@
+#Libraries
 import os
 import requests
 import shutil
 import gzip
 import pandas as pd
 import subprocess
+import re
 import sys
 
 #Coverts the protien existance to a numrical figure
@@ -19,6 +21,7 @@ def level_converter(description):
 	else:
 		return 5
 
+#Converts reviewed level to a boolean
 def reviewed(checked):
 	if checked == 'reviewed':
 		return True
@@ -68,7 +71,6 @@ def transmem_counter(s):
 
 #Isolates the n..n part of signal peptides
 #SIGNAL 1..22; /evidence="ECO:0000255 --> 1..22
-import re
 def IsolateSignal(s):
 	if not isinstance(s, float):
 		num = re.search(r"\d+\.\.\d+", s)
@@ -78,9 +80,12 @@ def IsolateSignal(s):
 			return None
 	else:
 		return None
+
+#Needed files
 file = "uniprot.tsv.gz"
 gene_file = "coding_protiens.xlsx"
 
+#Creates gene_file if it doesn't exist
 if not os.path.exists(gene_file):
 	print(f"Missing {gene_file} file, running protein_list_builder.py")
 	try:
@@ -88,7 +93,7 @@ if not os.path.exists(gene_file):
 	except subprocess.CalledProcessError as e:
         	print(f"Error while running protein_list_builder.py: {e}")	
 
-#Checks for and downloads file
+#Checks for and downloads UniProtKB  file
 print("Looking for uniprot gene file")
 if os.path.exists(file):
         print("TSV  File Found")
@@ -119,24 +124,20 @@ else:
         if attempt == max_attempt:
                 print("Attempt to download file timed out too many times. File not downloaded")
                 sys.exit("Exiting Program")
-#        else:
- #               print("Unzipping", output_gz_file, "to", output_tsv_file)
-  #              with gzip.open(output_gz_file, 'rb') as f_in:
-   #                     with open(output_tsv_file, 'wb') as f_out:
-    #                            shutil.copyfileobj(f_in, f_out)
-     #           print("Unzipped")
 
+# Creates dataframes and initializes dictionary to hold information
 gene_df = pd.read_excel(gene_file)
+gene_dict = {}
+
+#Creates a list of all the genes from GENCODE and combines them with their IDs, memory created to hold data collected from UniProtKB
 id_list = gene_df['gene_id'].tolist()
 name_list = gene_df['gene_name'].tolist()
-gene_dict = {}
 for i in range(len(id_list)):
 	gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[]}
 print(len(gene_dict))
 
-
+#Reads and modifies UniProtKB data 
 all_gene = pd.read_csv(file, sep='\t')
-
 
 all_gene['Protein existence'] = all_gene['Protein existence'].apply(level_converter)
 all_gene['Reviewed'] = all_gene['Reviewed'].apply(reviewed)
@@ -144,11 +145,15 @@ all_gene['Transmembrane'] = all_gene['Transmembrane'].apply(transmem_counter)
 all_gene['Signal peptide'] = all_gene['Signal peptide'].apply(IsolateSignal)
 print("Making connections with gene ids")
 
-#Has correct UniprotKB ID and the ENSG Number
+#Has correct UniprotKB ID and the ENSG Number, hand chosen gene
 exceptions_dict = {"Q6UXT6":"ENSG00000228336"}
 
+#collects data from UniProtKB
 count = 0
 extra = 0
+
+#Links GENCODE genes to UniProtKB IDs through ENSG numbers 
+
 for index, row in all_gene.iterrows():
 	row_dict = clean_string(row['Ensembl'])
 	for i in range(0, len(row_dict)):
@@ -207,12 +212,14 @@ for index, row in all_gene.iterrows():
                 gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
                 gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
 
+
 print("Making connections with gene symbols")
 gene_symbols_dict = {}
 for i in gene_dict:
 	gene_symbols_dict[gene_dict[i]["genecode_name"]] = i
 symbol_count = 0
-#Write code to look for genes through symbols; need {"gene_symbol":gene_id}
+
+#Looks for GENCODE genes' link to UniProtKB through the gene symbols
 for index, row in all_gene.iterrows():
 	ids = str(row['Gene Names']).replace(';', '').split(' ')
 	for name in ids:
@@ -245,7 +252,7 @@ for index, row in all_gene.iterrows():
 
 
 not_found = 0
-
+#Checks for empty ENSG numbers
 for i in gene_dict:
 	if not gene_dict[i]['entry_name']:
 		not_found += 1
@@ -263,6 +270,7 @@ print(len(gene_dict))
 print("Making Frame uniprot_output.xlsx")
 final_frame = pd.DataFrame(gene_dict).T
 
+#Gives labels
 gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 
     "transl_id", "CDS", "gencode_symbol", "ENSP", "ENST", "uniprot_id", 
     "reviewed", "entry_name", "gene_symbol", "description", "protein length", 

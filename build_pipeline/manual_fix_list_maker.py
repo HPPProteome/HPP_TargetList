@@ -1,5 +1,6 @@
 import pandas as pd
 
+#Lists ENSG numbers and their corrosponding UniProtKB ID
 data = [
     "ENSG00000152061", "Q5R372",
     "ENSG00000179915", "Q9ULB1",
@@ -13,6 +14,7 @@ data = [
 genes = data[0::2]
 proteins = data[1::2]
 
+#Creates file to hold the hand picked UniProtKB
 df = pd.DataFrame({'Gene ID': genes,'UniProt ID': proteins})
 df.to_csv('manualFix.tsv', sep='\t', index=False)
 print("TSV file of manualy selected entries created as manualFix.tsv")

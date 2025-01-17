@@ -1,3 +1,4 @@
+#Libraries
 import os
 import requests
 import zipfile
@@ -5,9 +6,11 @@ import pandas as pd
 import subprocess
 import sys
 
+#Needed files
 gene_file = "cleaned_table.xlsx"
 rna_file = "rna_tissue_consensus.tsv.zip"
 
+#Downloads rna_tissue_consensus.tsv from Human Protein Atlas if not present
 print("Looking for RNA_expression file")
 if os.path.exists(rna_file):
     print("RNA expressions File Found")
@@ -39,6 +42,7 @@ else:
         print("File failed to download")
         sys.exit("Exiting Program")
 
+#Builds cleaned_table.xlsx if not availible 
 
 if not os.path.exists(gene_file):
 	print(f"{gene_file} file not found, running clean_entries.py")
@@ -49,12 +53,11 @@ if not os.path.exists(gene_file):
 
 
 
-
+#Reads data 
 rna_data = pd.read_csv('rna_tissue_consensus.tsv.zip',compression='zip', sep='\t')
-
-
 gene_data = pd.read_excel(gene_file)
 
+#How high a nTPM score must be to assign a PE2
 threshold = 1 #change to be lower or higher
 
 gene_data['Suggested PE'] = ''
@@ -62,6 +65,7 @@ gene_data['Highest nTPM Score'] = ''
 gene_data[f"Tissues with nTPM Score Above {threshold} (/50)"] = ''
 rna_dict = {}
 
+#Collects all nTPM scores for every gene present  
 for index, row in rna_data.iterrows():
 	gene = row['Gene']
 	if gene not in rna_dict:
@@ -71,6 +75,7 @@ for index, row in rna_data.iterrows():
 count = 0
 changed = 0
 
+#Checks to see if a PE > 2 meets the qualifications to be assigned 2.
 for index, row in gene_data.iterrows():
 	if row['gene_id'] in rna_dict:
 		count += 1
@@ -85,6 +90,6 @@ for index, row in gene_data.iterrows():
 print("Number of genes in RNA tsv file:", count)
 print("Number of genes with new suggested PE score:", changed)
 
-print("Making Frame")
+print("Making Frame: updatedPE.xlsx")
 gene_data.to_excel("updatedPE.xlsx")
 print("done")

@@ -1,15 +1,18 @@
+#Libraries
 import pandas as pd
 import os
 import subprocess
 from numpy import nan
 
+#Makes an excel string into a list
 def makeList(collection):
 	return collection.replace('[', '').replace(']', '').replace("'", '').strip().split(',')
 
 
-
+#Table needed 
 gene_data = "uniprot_output.xlsx"
 
+#Builds table if table is not availible
 if not os.path.exists(gene_data):
 	print(f"{gene_data} file not found, running link_to_uniprot.py")
 	try:
@@ -17,10 +20,12 @@ if not os.path.exists(gene_data):
 	except subprocess.CalledProcessError as e:
 		print(f"Error while running link_to_uniprot.py: {e}")
 
+#Reads and modifies gene data for analysis
 gene_data = pd.read_excel("uniprot_output.xlsx")
 gene_data = gene_data.iloc[:,2:]
 gene_data.columns = gene_data.columns.str.strip()
 
+#Since reading an excel file into a dataframe creates a single string, values  need to be re-seperated into lists
 columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'found_with', 'evidence', 'ENSP', 'ENST', 'isoform', 'Num Transmembrane Regions', 'EC Number', 'Signal Peptide']
 
 for i in columns:
@@ -62,7 +67,7 @@ columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein le
 strange_genes = pd.DataFrame(strange_genes, columns=columns).fillna("")
 strange_genes.to_excel("False_ensg_over_name.xlsx", index=False)
 
-#Gets rid of any false entries in a reviewed set
+#Gets rid of any false entries if a GENCODE gene has a corosponding reviewed UniProt entry
 for index, row in gene_data.iterrows():
     entry_types = row['entry_type']
     contains_true = 'True' in [val.strip() for val in entry_types]
@@ -103,7 +108,7 @@ for index, row in gene_data.iterrows():
         gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
         gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
        
-#Makes sure that only the highest level of exsistance protiens are kept
+#Makes sure that only the lowest  level of exsistance proteins are kept [1,1,4] --> [1,1]
 for index, row in gene_data.iterrows():
 	if len(row['evidence']) > 1:
 		level = [int(exist) for exist in row['evidence']]
@@ -140,7 +145,6 @@ if not os.path.exists(manual_file):
 
 manual_fix = pd.read_csv(manual_file, sep='\t')
 manual_dict = manual_fix.set_index('Gene ID')['UniProt ID'].to_dict()
-
 
 for index, row in gene_data.iterrows():
 	if row['gene_id'] in manual_dict:
@@ -217,7 +221,7 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
 print("Number of repeats:", repeats)
 
-#Chooses highest CDS length when muiltiple 
+#Chooses highest CDS length when muiltiple entries could be a possible match
 for index, row in gene_data.iterrows():
 	if len(row['entry_type']) > 1 and not isinstance(row['entry_type'], str):
 		mini_dict = {"longest":0, "index":None}
@@ -247,7 +251,7 @@ gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "tra
     "reviewed", "entry_name", "gene_symbol", "description", "protein length", 
     "entry_type", "evidence", "found_with", "isoform", "EC Number", "Num Transmembrane Regions", "Signal Peptide"]
 
-#Cleans data that is no longer a list
+#Cleans data so that is no longer a list
 for index, row in gene_data.iterrows():
 	if isinstance(row['entry_name'], list) and len(row['entry_name']) == 1:
                     gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][0]
@@ -270,6 +274,6 @@ for index, row in gene_data.iterrows():
 
 print(gene_data.shape)
 
-print("Making Frames")
+print("Making Frame: cleaned_table.xlsx")
 gene_data.to_excel("cleaned_table.xlsx")
 print("done")

@@ -1,3 +1,5 @@
+#Importing Libraries
+
 from Bio import SeqIO
 import pandas as pd
 import os 
@@ -5,12 +7,14 @@ import requests
 import shutil
 import sys
 
-version = 47 #Change for formating
+#Indicates what version of GENCODE you want to download
+version = 47
 
+#Name of file downloaded/computer is looking for
 gtf_file = "gencode.annotation.gtf.gz"
 
 
-#Checks for and downloads file
+#Checks for and downloads the GTF file
 print("Looking for GTF file")
 if os.path.exists(gtf_file):
         print("GENCODE GTF File Found")
@@ -42,6 +46,8 @@ else:
 		sys.exit("Stopping the program.")
 	
 
+#Parses the attributes of each gene into a managable dictionary
+
 def parse_attr(attr_str):
 	attr = {}
 	for attribute in attr_str.split(';'):
@@ -57,18 +63,29 @@ def parse_attr(attr_str):
 
 
 
-
+#Name of columns in the GTF 
 column_names = ['chrom', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
 gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None, names=column_names)
 print("GTF file read")
 
+#If a gene has one of these tags or has one of these transcription types, it is removed from the wanted list
 unexcepted_tags = ['readthrough_transcript', 'EnsEMBL_merge_exception', 'readthrough_gene', 'exp_conf', 'RNA_Seq_supported_only']
 unexcepted_trans_type = ['nonsense_mediated_decay', 'protein_coding_CDS_not_defined', 'retained_intron', 'TEC']
+
+#Counts number of total genes in GENCODE
 gene_num = 0
+
+#Reduces the file size so code runs faster, only keeps genes and transcript
 gtf_df = gtf_df[gtf_df['feature'].isin(['gene','transcript']) ]
+
+#Counts number of protein coding genes (Not all of these are use)
 gene_counter = 0
 print("Searching for coding genes")
+
+#Holds info for kept protein-coding genes.
 coding_gene = {}
+
+#Collects gene info
 for index, row in gtf_df.iterrows():
 	if row["feature"] == 'gene':
 		gene_num += 1
@@ -85,11 +102,14 @@ for index, row in gtf_df.iterrows():
 			if trans_type not in unexcepted_trans_type:
 				if 'readthrough_gene' not in tag:
 					coding_gene[gene_id] = {"gene_id": gene_id, "gene_name":gene_name, "chrom": chrom, "start": start, "end": end, "trans_id": None, "transl_type": None, "transl_id": None, "CDS": None}
+
+
 print(f"There are {gene_num} genes in GENCODE")
 print(f"There are {gene_counter} genes with protien coding tag")
 print(f"There are {len(coding_gene)} protien coding genes") 
 print("Adding translation ids and translation types")
-#Add transl id, deal with overwritting of tags for diff type so overwrting key/value
+
+#Adds Translation ID/Type
 for i, row in gtf_df.iterrows():
 	translation_type = None
 	if row['feature'] == 'transcript':
@@ -107,8 +127,8 @@ for i, row in gtf_df.iterrows():
 			if coding_gene[gene_id]['transl_type'] == None:
 				coding_gene[gene_id]['transl_type'] = translation_type
 	
-
-print("Making Frame")
+#Builds List of x number of protein coding genes from collected information
+print("Making Frame: coding_protiens.xlsx")
 final_frame = pd.DataFrame(coding_gene).T
 final_frame.to_excel("coding_protiens.xlsx") 
 print("Done")
