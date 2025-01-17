@@ -13,6 +13,8 @@ gene_file = "updatedPE.xlsx"
 
 #Secound peptide atlas file used
 backUp_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins/query_guest_20241206-152057-243.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_guest_20241206-152057-243&rs_page_size=1000000&output_mode=tsv"
+backUp_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins/query_edeutsch_20250117-134052-808.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_edeutsch_20250117-134052-808&rs_page_size=1000000&output_mode=tsv"
+
 backUp_atlas_file = "Secoundary_peptideAtlas.tsv"
 
 #Downloads files if not present
@@ -92,6 +94,7 @@ atlas_dict = {}
 for index, row in atlas_df.iterrows():
 	if isinstance(row['Ensembl_Accession'], str):
 		atlas_dict[row['Ensembl_Accession']] = {"catagory":row['PeptideAtlas_Category'], "observed":row['nobs'], "distinct":row['npep'], "unique":row['nunipep'], "uniprot":row['accession']}
+
 secound_atlas_dict = {}
 for index, row in secound_atlas_df.iterrows():
 	if isinstance(row['biosequence_name'], str):
