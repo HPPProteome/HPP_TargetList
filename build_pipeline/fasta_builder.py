@@ -4,26 +4,42 @@ import requests
 from Bio import SeqIO
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import sys
+import gzip
 
 #Varable to hold all IDs
-
 identifier_dict = {}
+seq_dict = {}
 
+#Builds a fasta file by using the Uniprot ID as an idenfitier.
+#A dictionary is used to prevent repeat indentifiers, a ENSP or ENSG number is used in cases of repeats.
+#Sequences are assigned to ENSG numbers this way. Uniprot is used when a UniProtKB ID is used, GENCODE is used when a ENSG number is used
 def to_fasta(row):
+
+
     if row['UniProtKB ID'] not in identifier_dict and pd.notna(row['UniProtKB ID']):
-        line = f">{row['UniProtKB ID']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+        line = f">{row['UniProtKB ID']} {row['Gene ID']}|{row["ENSP"]}|{len(gene_dict[row['UniProtKB ID']])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{gene_dict[row['UniProtKB ID']]}\n"
         identifier_dict[row['UniProtKB ID']] = "Used"
+        seq_dict[row['Gene ID']] = gene_dict[row['UniProtKB ID']]
+
     elif pd.isna(row['UniProtKB ID']):
-        line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}||||{row['Gene Symbol']}\n{row["sequence"]}\n"
+        line = f">{row['ENSP']} {row['Gene ID']}|{row["ENSP"]}|{len(gencode_dict[row['ENSP']])}||||{row['Gene Symbol']}\n{gencode_dict[row['ENSP']]}\n"
+        seq_dict[row['Gene ID']] = gencode_dict[row['ENSP']]
 
     elif pd.isna(row['ENSP']) and row['UniProtKB ID'] in identifier_dict:
-        line = f">{row['Gene ID']} {row["ENSP"]}|{len(row["sequence"])}||||{row['Gene Symbol']}\n{row["sequence"]}\n"
+        line = f">{row['Gene ID']} {row['Gene ID']}|{row["ENSP"]}|{len(gencode_dict[row['ENSP']])}||||{row['Gene Symbol']}\n{gene_dict[row['ENSP']]}\n"
+        seq_dict[row['Gene ID']] = gencode_dict[row['ENSP']]
 
     else:
-        line = f">{row['ENSP']} {row["ENSP"]}|{len(row["sequence"])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{row['sequence']}\n"
+        line = f">{row['ENSP']} {row['Gene ID']}|{row["ENSP"]}|{len(gencode_dict[row['ENSP']])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{gencode_dict[row['ENSP']]}\n"
+        seq_dict[row['Gene ID']] = gencode_dict[row['ENSP']]
+
+    if row['Gene ID'] not in ensemble_dict:
+        line = line.replace(">", ">GENCODE_")
+        print("Hello")
     line = line.replace('nan|','|')
     return line
 
+#Converts M,X,Y chromosome labels into numbers
 def number(s):
     try:
         int(s)
@@ -41,6 +57,11 @@ gene_df = pd.read_excel(gene_file)
 
 #Uniprot sequences are taken if Gencode ones do not exist 
 uniprot_fasta = 'uniprot.fa'
+gencode_fasta = 'gencode.pc_translations.fa.gz'
+
+ensemble = "Homo_sapiens.GRCh38.pep.all.fa" #Used to add GENCODE lable to genes
+
+#Downloads needed data
 print("Searching for Uniprot Fasta file")
 if not os.path.exists(uniprot_fasta):
 
@@ -68,43 +89,54 @@ else:
 	print("File found")
 gene_dict = {}
 
+#Parses FASTA files into dictionaries
 for record in SeqIO.parse(uniprot_fasta, "fasta"):
 	header_parts = record.description.split('|')
 	id = header_parts[1]
 	seq = str(record.seq)
 	gene_dict[id] = seq
 
-gene_df['Hydrophobicity'] = ''
-gene_df['PI'] = ''
+gencode_dict = {}
+with gzip.open(gencode_fasta, "rt") as unzipped_fasta: 
+    for record in SeqIO.parse(unzipped_fasta, "fasta"):
+        header_parts = record.description.split("|")
+        ensp_number = header_parts[0]
+        sequence = str(record.seq)
+        #print(ensp_number)    
+        gencode_dict[ensp_number] = sequence 
 
-gene_df = gene_df.sort_values(by='UniProtKB ID', na_position='first')
-Ucount = 0
-print("Calculating Hydrophobicity and PI")
-#Gets sequence if not present
-for index, row in gene_df.iterrows():
-	if row['sequence'] == "MJA" and row['UniProtKB ID'] in gene_dict:
-		gene_df.at[index, 'sequence'] = gene_dict[row['UniProtKB ID']]
-
-	if row['sequence'] == "MJA" and not row['UniProtKB ID'] in gene_dict:
-		print("Not present:", row['Gene ID'], row['Gene Symbol'])
+ensemble_dict = {}
+for record in SeqIO.parse(ensemble, "fasta"):
+	header_parts = record.description.split(" ")
+	ensg = header_parts[3].split(":")[-1].split(".")[0]
+	ensemble_dict[ensg] = header_parts[0]
 	
-	else:
-		if 'U' in gene_df.at[index, 'sequence']:
-			Ucount += 1
 
-		#Removes U becuase protein analysis can't handle U.
-		sequence  = ''.join([aa for aa in gene_df.at[index, 'sequence'] if aa in "ACDEFGHIKLMNPQRSTVWY"])
-		#print(sequence)
-		analysis = ProteinAnalysis(sequence)
-		gene_df.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
-		gene_df.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
 
-print("Number of sequences with U:", Ucount)
-
+#Builds FASTA file
+gene_df = gene_df.sort_values(by='UniProtKB ID', na_position='first')
 print("Writing FASTA file")
 with open('coding_genes.fasta', 'w') as f:
     f.write(''.join(gene_df.apply(to_fasta, axis=1)))
 print("File written as coding_genes.fasta")
+
+
+#Adds Hydrophobicity and PI
+gene_df['Hydrophobicity'] = ''
+gene_df['PI'] = ''
+print("Calculating Hydrophobicity and PI")
+
+for index, row in gene_df.iterrows():
+	sequence = ''.join([aa for aa in seq_dict[row['Gene ID']] if aa in "ACDEFGHIKLMNPQRSTVWY"]) #Removes U (selenocysteine)
+	analysis = ProteinAnalysis(sequence)
+	gene_df.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
+	gene_df.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
+
+
+
+
+
+
 
 
 #Includes annotations for what each column means
@@ -166,13 +198,14 @@ secound_sheet = {"Gene ID": "ENSG number, from GENCODE GTF.",
 secound_sheet_df = pd.DataFrame(list(secound_sheet.items()), columns=["Column", "Description"])
 
 
-
+#Builds table
 print("Making updated table")
 
+
+#Re-sorts data table by chromosome number
 gene_df['Chromosome'] = gene_df['Chromosome'].apply(number)
 gene_df = gene_df.sort_values(by='Chromosome', ascending=True)
 gene_df['Chromosome'] = gene_df['Chromosome'].replace(25, "M").replace(24,"Y").replace(23, "X")
-gene_df.drop('sequence', axis=1, inplace=True)
 
 output_file = "Supplemental_table_1.xlsx"
 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
