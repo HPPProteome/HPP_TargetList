@@ -35,7 +35,7 @@ def to_fasta(row):
 
     if row['Gene ID'] not in ensemble_dict:
         line = line.replace(">", ">GENCODE_")
-        print("Hello")
+
     line = line.replace('nan|','|')
     return line
 
