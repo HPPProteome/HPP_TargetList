@@ -82,7 +82,7 @@ Outputs:
 - Uses collected sequences to calculate the PI score and Hydrophobicity of each gene and appends it to the main table taken from sequences.
   
 Outputs: 
-- coding_genes.fasta
+- coding_genes.fasta, format discussed above
 - Supplemental_table_1.xlsx, which is the most up to date table of all genes and their collected information; excludes amino acid sequences.
 
 # RUN_ME.py:
