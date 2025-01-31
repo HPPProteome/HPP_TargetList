@@ -11,6 +11,19 @@ cd HPP_TargetList/build_pipeline
 
 python RUN_ME.py
 ```
+If you have a specific file you want to run the code in:
+```bash
+git clone https://github.com/HPPProteome/HPP_TargetList/
+
+mkdir -p ~/folder_name
+
+cp HPP_TargetList/build_pipeline/RUN_ME.py ~/folder_name/
+
+cd ~/folder_name
+
+
+python RUN_ME.py
+```
 
 # All Scripts and their output:
 
