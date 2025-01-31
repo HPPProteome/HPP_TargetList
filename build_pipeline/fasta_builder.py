@@ -33,8 +33,8 @@ def to_fasta(row):
         line = f">{row['ENSP']} {row['Gene ID']}|{row["ENSP"]}|{len(gencode_dict[row['ENSP']])}|{row['Description']}|{row['UniProtKB ID']}|{row['Entry Name']}|{row['Gene Symbol']}\n{gencode_dict[row['ENSP']]}\n"
         seq_dict[row['Gene ID']] = gencode_dict[row['ENSP']]
 
-    if row['Gene ID'] not in ensemble_dict:
-        line = line.replace(">", ">GENCODE_")
+#    if row['Gene ID'] not in ensemble_dict:
+#        line = line.replace(">", ">GENCODE_")
 
     line = line.replace('nan|','|')
     return line
@@ -59,7 +59,7 @@ gene_df = pd.read_excel(gene_file)
 uniprot_fasta = 'uniprot.fa'
 gencode_fasta = 'gencode.pc_translations.fa.gz'
 
-ensemble = "Homo_sapiens.GRCh38.pep.all.fa" #Used to add GENCODE lable to genes
+#ensemble = "Homo_sapiens.GRCh38.pep.all.fa" #Used to add GENCODE lable to genes
 
 #Downloads needed data
 print("Searching for Uniprot Fasta file")
@@ -105,11 +105,11 @@ with gzip.open(gencode_fasta, "rt") as unzipped_fasta:
         #print(ensp_number)    
         gencode_dict[ensp_number] = sequence 
 
-ensemble_dict = {}
-for record in SeqIO.parse(ensemble, "fasta"):
-	header_parts = record.description.split(" ")
-	ensg = header_parts[3].split(":")[-1].split(".")[0]
-	ensemble_dict[ensg] = header_parts[0]
+#ensemble_dict = {}
+#for record in SeqIO.parse(ensemble, "fasta"):
+#	header_parts = record.description.split(" ")
+#	ensg = header_parts[3].split(":")[-1].split(".")[0]
+#	ensemble_dict[ensg] = header_parts[0]
 	
 
 
