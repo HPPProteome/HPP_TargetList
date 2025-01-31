@@ -46,7 +46,7 @@ Outputs:
 -	Takes in manualFix.tsv to specifically choose some (current: 8) uniprot entries to match to GENCODE entries.
 
 Outputs:
--	full_table.xlsx, which is a table of all 19,433 genes, where most UniProtKB entries have been removed to leave 1 GENCODE gene == 1 UniProtKB entry.
+-	cleaned_table.xlsx, which is a table of all 19,433 genes, where most UniProtKB entries have been removed to leave 1 GENCODE gene == 1 UniProtKB entry.
 - false_ensg_over_name.xlsx, which is a file which includes a list of all ENSG numbers where we chose an unreviwed ENSG link entry over a revewied Gene Symbol link, the reveiwed UniProt links are included with the ENSG numbers. 
 
 # Manual_fix_list_maker.py
