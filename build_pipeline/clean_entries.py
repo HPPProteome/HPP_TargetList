@@ -22,11 +22,10 @@ if not os.path.exists(gene_data):
 
 #Reads and modifies gene data for analysis
 gene_data = pd.read_excel("uniprot_output.xlsx")
-gene_data = gene_data.iloc[:,2:]
 gene_data.columns = gene_data.columns.str.strip()
 
 #Since reading an excel file into a dataframe creates a single string, values  need to be re-seperated into lists
-columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'found_with', 'evidence', 'ENSP', 'ENST', 'isoform', 'Num Transmembrane Regions', 'EC Number', 'Signal Peptide']
+columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'found_with', 'evidence', 'ENSP', 'ENST', 'isoform', 'Num Transmembrane Regions', 'EC Number', 'Signal Peptide', 'refSeq Number']
 
 for i in columns:
 	gene_data[i] = gene_data[i].apply(makeList)
@@ -57,12 +56,14 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'EC Number'] = [row['EC Number'][i] for i in range(len(found_right)) if found_right[i]]
 		gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(found_right)) if found_right[i]]
 		gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(found_right)) if found_right[i]]
+		gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(found_right)) if found_right[i]]
 		for i in range(len(found_type)):
 			if row['found_with'][i].strip()  == "gene_name" and row['entry_type'][i].strip():
+			
 				strange_genes.append({col: row[col][i] for col in row.index if isinstance(row[col], list)})
 				gene_data.at[index, 'Reviewed Entry Available'] = 'yes'
 
-columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'evidence', 'found_with', 'isoform', 'EC Number', 'Num Transmembrane Regions']
+columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'evidence', 'found_with', 'isoform', 'EC Number', 'Num Transmembrane Regions', 'refSeq Number']
 
 strange_genes = pd.DataFrame(strange_genes, columns=columns).fillna("")
 strange_genes.to_excel("False_ensg_over_name.xlsx", index=False)
@@ -107,7 +108,8 @@ for index, row in gene_data.iterrows():
         gene_data.at[index, 'EC Number'] = [row['EC Number'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
         gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
         gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
-       
+        gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+
 #Makes sure that only the lowest  level of exsistance proteins are kept [1,1,4] --> [1,1]
 for index, row in gene_data.iterrows():
 	if len(row['evidence']) > 1:
@@ -133,9 +135,10 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'Num Transmembrane Regions'] = [row['Num Transmembrane Regions'][i].strip() for i in range(len(keeper)) if keeper[i]]
 		gene_data.at[index, 'found_with'] = [row['found_with'][i].strip() for i in range(len(keeper)) if keeper[i]]
 		gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i].strip() for i in range(len(keeper)) if keeper[i]]
+		gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(keeper)) if keeper[i]]
+
 #Manually Assigns the correct UniProt ID to 9 protiens
 manual_file = "manualFix.tsv"
-
 if not os.path.exists(manual_file):
 	print(f"{manual_file} file not found, running manual_fix_file_maker.py")
 	try:
@@ -163,37 +166,39 @@ for index, row in gene_data.iterrows():
                 gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
                 gene_data.at[index, 'found_with'] = row['found_with'][i]
                 gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
+                gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
 
 
 
 
-
-
-#Chooses the lowest Isoform if they are present
+#Uses the entry with the connocial ENSP and ENST numbers (if availible), by taking the only avaible ENSP number
 for index, row in gene_data.iterrows():
-	if len(row['isoform']) > 1 and isinstance(row['isoform'], list):
-		if not all(item == 'None' or (isinstance(item, str) and item.startswith("ENSG")) for item in row['isoform']):
-			useable_isoforms = [[index, isoform] for index, isoform in enumerate(row['isoform']) if isoform != 'None' and not isoform.startswith("ENSG")]
-			if not any(None in sublist for sublist in useable_isoforms):
-				#print(useable_isoforms)
-				#print(row['gene_id'])
-				
-				i, _ = min(useable_isoforms, key=lambda x: int(x[1].split('-')[-1]))
-			
-				gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
-				gene_data.at[index, 'entry_name'] = row['entry_name'][i]
-				gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]  
-				gene_data.at[index, 'description'] = row['description'][i]  
-				gene_data.at[index, 'protein length'] = row['protein length'][i]
-				gene_data.at[index, 'evidence'] = row['evidence'][i]
-				gene_data.at[index, 'entry_type'] = row['entry_type'][i]
-				gene_data.at[index, 'ENSP'] = row['ENSP'][i]
-				gene_data.at[index, 'ENST'] = row['ENST'][i]
-				gene_data.at[index, 'isoform'] = row['isoform'][i]
-				gene_data.at[index, 'EC Number'] = row['EC Number'][i]
-				gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
-				gene_data.at[index, 'found_with'] = row['found_with'][i]
-				gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
+    if isinstance(row['ENSP'], list) and len(row['ENSP']) > 1:
+        rowSet = set(row['ENSP'])
+        rowSet.discard('None')
+        if len(rowSet) == 1:
+                ENSP = list(rowSet)[0]
+                i = row['ENSP'].index(ENSP)
+                
+                gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
+                gene_data.at[index, 'entry_name'] = row['entry_name'][i]
+                gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]
+                gene_data.at[index, 'description'] = row['description'][i]
+                gene_data.at[index, 'protein length'] = row['protein length'][i]
+                gene_data.at[index, 'evidence'] = row['evidence'][i]
+                gene_data.at[index, 'entry_type'] = row['entry_type'][i]
+                gene_data.at[index, 'ENSP'] = row['ENSP'][i]
+                gene_data.at[index, 'ENST'] = row['ENST'][i]
+                gene_data.at[index, 'isoform'] = row['isoform'][i]
+                gene_data.at[index, 'EC Number'] = row['EC Number'][i]
+                gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
+                gene_data.at[index, 'found_with'] = row['found_with'][i]
+                gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
+                gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
+
+               
+
+
 
 
 
@@ -219,6 +224,8 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][0]
                     gene_data.at[index, 'found_with'] = row['found_with'][0]
                     gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
+                    gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
+
 print("Number of repeats:", repeats)
 
 #Chooses highest CDS length when muiltiple entries could be a possible match
@@ -245,6 +252,8 @@ for index, row in gene_data.iterrows():
 		gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
 		gene_data.at[index, 'found_with'] = row['found_with'][i]
 		gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
+		gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
+
 
 gene_fields = ["gene_id", "gene_name", "chrom", "start", "end", "trans_id", "transl_type", 
     "transl_id", "CDS", "gencode_symbol", "ENSP", "ENST", "uniprot_id", 
@@ -267,6 +276,7 @@ for index, row in gene_data.iterrows():
                     gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][0]
                     gene_data.at[index, 'found_with'] = row['found_with'][0]
                     gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
+                    gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
                     if row['isoform'][0] != None and not row['isoform'][0].startswith("ENSG"):
                         gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                     else:

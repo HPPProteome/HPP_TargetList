@@ -28,39 +28,53 @@ def reviewed(checked):
 	else:
 		return False
 
-#Creates a dictionary with the ensamble row, then picks the oldest isoform(if present) and gets the ensg number
-def clean_string(s):
-    gene_ids = []
-    if isinstance(s, str):
-        if "\"" in s:
-            new_list = s.split("\"")
-            for i in range(len(new_list)):
-                new_list[i] = new_list[i].split(" ")
-            for i in range(len(new_list)):
-                for j in range(len(new_list[i])):
-                    new_list[i][j] = new_list[i][j].replace(";", "").replace("[", "").replace("]", "")
-                    
-        else:
-            new_list = s.split(' ')
-            for j in range(len(new_list)):
-                new_list[j] = new_list[j].replace(";", "").replace("[", "").replace("]", "")
-        #print(new_list)
-        new_list = [sublist for sublist in new_list if any(item != "" for item in sublist)]
-        if isinstance(new_list[0], list):
-            if len(new_list[0]) > 3:
-                for i in range(0, len(new_list)):
-                    gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": new_list[i][-1]})
-        
-            else:
-                for i in range(0, len(new_list)):
-                    gene_ids.append({"gene_id":new_list[i][2].split('.')[0], "trans_id":new_list[i][0].split('.')[0], "ensg":new_list[i][1], "isoform": None})
-        elif len(new_list) > 0 and isinstance(new_list[0], str):
-            for i in range(0, len(new_list)):
-                gene_ids.append({"gene_id":new_list[2].split('.')[0], "trans_id":new_list[0].split('.')[0], "ensg":new_list[1], "isoform": new_list[-1]})
-                        
-    else:
-        gene_ids.append({"gene_id":""})
-    return gene_ids
+#Creates a dictionary with the ensamble row, then picks the isoform(if present) found in UP000005640_9606.dat and gets the ensp, enst and ensg number
+def clean_string(s, id):
+
+
+	gene_ids = []
+	if not isinstance(s, str):
+		return gene_ids
+	
+	elif "[" in s:
+		return isoformFinder(s, id)
+
+	else:
+		return StringParser(s, id)
+	
+	
+		
+def isoformFinder(s, id):
+	printed_isoforms = set()
+	gene_ids = []
+	genes = s.split("\"")
+	for i in genes:
+		if "[" in i:
+			isoform = i.split("[")[1].split("]")[0]
+			seperate_ids = i.replace(" ", "").split(";") #ENST, ENSP, ENSG Isoform
+			
+
+			if id not in isoformDict:
+				if id not in printed_isoforms:
+					print(id)
+					printed_isoforms.add(id)
+				gene_ids.append({"gene_id":seperate_ids[2].split(".")[0], "trans_id":None, "ensp":None, "isoform":seperate_ids[2].split(".")[2].replace("[","").replace("]",""), "refSeq":None})
+			elif isoformDict[id] == isoform:
+				gene_ids.append({"gene_id":seperate_ids[2].split(".")[0], "trans_id":seperate_ids[0], "ensp":seperate_ids[1], "isoform":isoform, "refSeq":refSeqDict.get(isoform)})	
+
+			else:
+				 gene_ids.append({"gene_id":seperate_ids[2].split(".")[0], "trans_id":None, "ensp":None, "isoform":isoformDict.get(id), "refSeq":refSeqDict.get(isoformDict.get(id))})
+	return gene_ids
+
+def StringParser(s, id):
+	gene_ids = []
+	genes = s.split("\"")
+	for i in genes:
+		if "E" in i: #Checks to make sure the list isn't empty
+			seperate_ids = i.replace(" ", "").split(";")
+			gene_ids.append({"gene_id":seperate_ids[2].split(".")[0], "trans_id":seperate_ids[0], "ensp":seperate_ids[1], "isoform":isoformDict.get(id), "refSeq":refSeqDict.get(isoformDict.get(id))})
+		return gene_ids
+
 
 #counts number of transmembrane parts in a protien
 def transmem_counter(s):
@@ -84,6 +98,7 @@ def IsolateSignal(s):
 #Needed files
 file = "uniprot.tsv.gz"
 gene_file = "coding_protiens.xlsx"
+isoformFile = "UP000005640_9606.dat"
 
 #Creates gene_file if it doesn't exist
 if not os.path.exists(gene_file):
@@ -102,14 +117,13 @@ else:
         print(f"Downloading {file}")
         url = "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Clength%2Cprotein_existence%2Cxref_ensembl_full%2Cid%2Cgene_names%2Cprotein_name%2Cft_transmem%2Cec%2Cft_signal&format=tsv&query=%28organism_id%3A9606%29"
         output_gz_file = "uniprot.tsv.gz"
-        #output_tsv_file = "uniprot.tsv"
         print("Downloading", url)
         attempt = 0
         max_attempt = 3
 
         while attempt < max_attempt:
                 try:
-                        response = requests.get(url, stream=True, timeout=10)
+                        response = requests.get(url, stream=True)
                         response.raise_for_status()
                         with open(output_gz_file, 'wb') as f:
                                 f.write(response.content)
@@ -125,6 +139,52 @@ else:
                 print("Attempt to download file timed out too many times. File not downloaded")
                 sys.exit("Exiting Program")
 
+
+
+print("Looking for uniprot dat file")
+
+gz_filename = "UP000005640_9606.dat.gz"
+output_filename = "UP000005640_9606.dat"
+
+if os.path.exists(output_filename):
+    print("DAT File Found")
+else:
+    print(f"Downloading {gz_filename}")
+    url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000005640/UP000005640_9606.dat.gz"
+    print("Downloading", url)
+    attempt = 0
+    max_attempt = 3
+
+    while attempt < max_attempt:
+        try:
+            response = requests.get(url, stream=True, timeout=10)
+            response.raise_for_status()
+            with open(gz_filename, 'wb') as f:
+                f.write(response.content)
+            print("Downloaded", gz_filename)
+            break
+        except requests.exceptions.Timeout:
+            attempt += 1
+            print(f"Request timed out, trying again: {attempt}/{max_attempt}")
+        except requests.exceptions.RequestException as e:
+            print("Error", e)
+            break
+    
+    if attempt == max_attempt:
+        print("Attempt to download file timed out too many times. File not downloaded")
+        sys.exit("Exiting Program")
+    
+    print("Decompressing file")
+    with gzip.open(gz_filename, "rb") as f_in:
+        with open(output_filename, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    print(f"Decompressed: {output_filename}")
+
+
+
+
+
+
 # Creates dataframes and initializes dictionary to hold information
 gene_df = pd.read_excel(gene_file)
 gene_dict = {}
@@ -133,7 +193,7 @@ gene_dict = {}
 id_list = gene_df['gene_id'].tolist()
 name_list = gene_df['gene_name'].tolist()
 for i in range(len(id_list)):
-	gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[]}
+	gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[], "refSeq Number":[]}
 print(len(gene_dict))
 
 #Reads and modifies UniProtKB data 
@@ -145,6 +205,39 @@ all_gene['Transmembrane'] = all_gene['Transmembrane'].apply(transmem_counter)
 all_gene['Signal peptide'] = all_gene['Signal peptide'].apply(IsolateSignal)
 print("Making connections with gene ids")
 
+#Reads datParser.py file into a dictionary
+isoformDict = {} # UniProtID : Cannonical Isoform
+refSeqDict = {}  #Isoform : refSequence
+with open(isoformFile) as UPfile:
+	for line in UPfile:
+		if "Sequence=Displayed;" in line:
+                        id = line.strip().replace(" ","").replace("CC","").split(";")[0].split("=")[1]
+                        uniProtID = id.split("-")[0]
+                        isoformDict[uniProtID] = id.split(",")[0]
+
+		if "RefSeq; NP_" in line:
+			isoNum = re.search(r"\[(.*?)\]", line)
+			if isoNum:
+				isoNum = isoNum.group().replace("[","").replace("]","")
+				prefix = isoNum.split("-")[0]
+				if prefix in isoformDict and isoNum  == isoformDict[prefix]:
+					refSeqDict[isoNum] = re.search(r"NP_(.*?);", line).group().replace(";","")
+		elif "RefSeq; XP_" in line:
+                        isoNum = re.search(r"\[(.*?)\]", line)
+                        if isoNum:
+                                isoNum = isoNum.group().replace("[","").replace("]","")
+                                prefix = isoNum.split("-")[0]
+                                if prefix in isoformDict and isoNum  == isoformDict[prefix]:
+                                        refSeqDict[isoNum] = re.search(r"XP_(.*?);", line).group().replace(";","")
+		elif "RefSeq; NM_" in line:
+                        isoNum = re.search(r"\[(.*?)\]", line)
+                        if isoNum:
+                                isoNum = isoNum.group().replace("[","").replace("]","")
+                                prefix = isoNum.split("-")[0]
+                                if prefix in isoformDict and isoNum  == isoformDict[prefix]:
+                                        refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
+
+
 #Has correct UniprotKB ID and the ENSG Number, hand chosen gene
 exceptions_dict = {"Q6UXT6":"ENSG00000228336"}
 
@@ -153,9 +246,9 @@ count = 0
 extra = 0
 
 #Links GENCODE genes to UniProtKB IDs through ENSG numbers 
-
+print("Selected UniProtIDs that have no listed Cannonical Isoform")
 for index, row in all_gene.iterrows():
-	row_dict = clean_string(row['Ensembl'])
+	row_dict = clean_string(row['Ensembl'], row['Entry'])
 	for i in range(0, len(row_dict)):
 		gene = row_dict[i]["gene_id"]		
 		if gene in gene_dict and row['Reviewed']:
@@ -168,13 +261,14 @@ for index, row in all_gene.iterrows():
                         gene_dict[gene]['found_with'].append("gene_id")
                         gene_dict[gene]['evidence'].append(row['Protein existence'])
                         gene_dict[gene]['entry_type'].append(row['Reviewed'])
-                        gene_dict[gene]['ENSP'].append(row_dict[i]["ensg"])
+                        gene_dict[gene]['ENSP'].append(row_dict[i]["ensp"])
                         gene_dict[gene]['ENST'].append(row_dict[i]["trans_id"])
                         gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
 
                         gene_dict[gene]['EC Number'].append(row["EC number"])
                         gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])   
                         gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                        gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"])
 
                         count +=1
 		elif gene in gene_dict and True not in gene_dict[gene]['reviewed']:
@@ -187,12 +281,13 @@ for index, row in all_gene.iterrows():
                         gene_dict[gene]['found_with'].append("gene_id")
                         gene_dict[gene]['evidence'].append(row['Protein existence'])
                         gene_dict[gene]['entry_type'].append(row['Reviewed'])
-                        gene_dict[gene]['ENSP'].append(row_dict[i]["ensg"])
+                        gene_dict[gene]['ENSP'].append(row_dict[i]["ensp"])
                         gene_dict[gene]['ENST'].append(row_dict[i]["trans_id"])
                         gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
                         gene_dict[gene]['EC Number'].append(row["EC number"])
                         gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
                         gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                        gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"]) 
 
 	if row['Entry'] in exceptions_dict:
                 gene = exceptions_dict[row['Entry']]
@@ -207,10 +302,11 @@ for index, row in all_gene.iterrows():
                 gene_dict[gene]['entry_type'].append(row['Reviewed'])
                 gene_dict[gene]['ENSP'].append(None)
                 gene_dict[gene]['ENST'].append(None) 
-                gene_dict[gene]['isoform'].append(None)
+                gene_dict[gene]['isoform'].append(isoformDict.get(row['Entry']))
                 gene_dict[gene]['EC Number'].append(row["EC number"])
                 gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
                 gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                gene_dict[gene]['refSeq Number'].append(refSeqDict.get(isoformDict.get(row['Entry']))) 
 
 
 print("Making connections with gene symbols")
@@ -244,8 +340,9 @@ for index, row in all_gene.iterrows():
                                     #Code is added for next clean_data.py
                                     gene_dict[ensg]['ENSP'].append(None)
                                     gene_dict[ensg]['ENST'].append(None)
-                                    gene_dict[ensg]['isoform'].append(None)
+                                    gene_dict[ensg]['isoform'].append(isoformDict.get(row['Entry Name']))
                                     gene_dict[ensg]['Signal Peptide'].append(row["Signal peptide"])
+                                    gene_dict[ensg]['refSeq Number'].append(refSeqDict.get(isoformDict.get(row['Entry'])))
                                     symbol_count += 1 
 
 
