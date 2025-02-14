@@ -1,7 +1,7 @@
 
-#THIS IS NOT UPDATED, DO NOT LOOK HERE FOR INFO
+# THIS IS NOT UPDATED, DO NOT LOOK HERE FOR INFO
 
-# HPP_TargetList
+ HPP_TargetList
 
 HPPP Proteome: Combining GENCODE and UniProtKB datasets
 The goal of this pipeline is to combine the data from all protein coding genes in GENCODE with the information in UniProtKB
