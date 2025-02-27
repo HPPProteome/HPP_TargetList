@@ -8,17 +8,17 @@ import re
 import sys
 
 class UniProtProcessor:
-    def __init__(self, isoformFile):
+    def __init__(self):
         self.uniprot_file = "uniprot.tsv.gz"
         self.gene_file = "protien_coding_genes.xlsx"
-        self.isoformFile = isoformFile
+        self.isoformFile = "Uniprot.dat"
         self.output_file = "uniprot_output.xlsx"
         
         self.gene_df = pd.read_excel(self.gene_file)
         self.uniprot_genes = pd.DataFrame()
         
         self.gene_dict = {}
-
+        self.key_words = {} #UniProtID (s) : Associated tags
         self.isoformDict = {} # UniProtID : Cannonical Isoform
         self.refSeqDict = {}  #Isoform : refSequence
 
@@ -187,10 +187,21 @@ class UniProtProcessor:
         self.uniprot_genes['Transmembrane'] = self.uniprot_genes['Transmembrane'].apply(self.transmem_counter)
         self.uniprot_genes['Signal peptide'] = self.uniprot_genes['Signal peptide'].apply(self.isolateSignal)
 
-
     def datParser(self):
         with open(self.isoformFile) as UPfile:
             for line in UPfile:
+                    if "AC   " in line:
+                        changing_keys = line.strip().replace(" ","").replace("AC","").split(";")   
+                        for key in changing_keys:
+                            self.key_words[key] = [] 
+                                
+                    if "KW   " in line:
+                        words = line.strip().replace(" ","").replace("KW","").replace(".",";")
+
+                        for key in changing_keys:
+                            if key in self.key_words:
+                                self.key_words[key].append(words) 
+
                     if "Sequence=Displayed;" in line:
                             id = line.strip().replace(" ","").replace("CC","").split(";")[0].split("=")[1]
                             uniProtID = id.split("-")[0]
@@ -201,21 +212,21 @@ class UniProtProcessor:
                             if isoNum:
                                     isoNum = isoNum.group().replace("[","").replace("]","")
                                     prefix = isoNum.split("-")[0]
-                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix]:
+                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix] and prefix not in self.refSeqDict:
                                             self.refSeqDict[isoNum] = re.search(r"NP_(.*?);", line).group().replace(";","")
                     elif "RefSeq; XP_" in line:
                             isoNum = re.search(r"\[(.*?)\]", line)
                             if isoNum:
                                     isoNum = isoNum.group().replace("[","").replace("]","")
                                     prefix = isoNum.split("-")[0]
-                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix]:
+                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix] and prefix not in self.refSeqDict:
                                             self.refSeqDict[isoNum] = re.search(r"XP_(.*?);", line).group().replace(";","")
                     elif "RefSeq; NM_" in line:
                             isoNum = re.search(r"\[(.*?)\]", line)
                             if isoNum:
                                     isoNum = isoNum.group().replace("[","").replace("]","")
                                     prefix = isoNum.split("-")[0]
-                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix]:
+                                    if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix] and prefix not in self.refSeqDict:
                                             self.refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
 
 
@@ -226,7 +237,7 @@ class UniProtProcessor:
         id_list = self.gene_df['gene_id'].tolist()
         name_list = self.gene_df['gene_name'].tolist()
         for i in range(len(id_list)):
-            self.gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[], "refSeq Number":[]}
+            self.gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[], "refSeq Number":[], "Key Words":[]}
         print("Number of genes from GENCODE:", len(self.gene_dict))
         self.uniprotMod()
         print("Making connections with gene ids")
@@ -262,6 +273,7 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])   
                                 self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"])
+                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
                                 count +=1
                 elif gene in self.gene_dict and True not in self.gene_dict[gene]['reviewed']:
@@ -281,6 +293,7 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
                                 self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"]) 
+                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
             if row['Entry'] in exceptions_dict:
                         gene = exceptions_dict[row['Entry']]
@@ -300,7 +313,7 @@ class UniProtProcessor:
                         self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
                         self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
                         self.gene_dict[gene]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry']))) 
-
+                        self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
         print("Making connections with gene symbols")
         gene_symbols_dict = {}
@@ -336,6 +349,7 @@ class UniProtProcessor:
                                             self.gene_dict[ensg]['isoform'].append(self.isoformDict.get(row['Entry Name']))
                                             self.gene_dict[ensg]['Signal Peptide'].append(row["Signal peptide"])
                                             self.gene_dict[ensg]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry'])))
+                                            self.gene_dict[ensg]['Key Words'].append(self.key_words.get(row['Entry']))
                                             symbol_count += 1 
         extra = 0
         not_found = 0
@@ -372,3 +386,4 @@ if __name__ == "__main__":
     processor = UniProtProcessor()
     processor.run()
  
+

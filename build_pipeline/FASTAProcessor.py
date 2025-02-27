@@ -9,7 +9,7 @@ import subprocess
 import sys
 import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-
+import re
 
 class FASTAProcessor():
     def __init__(self, version):
@@ -95,8 +95,13 @@ class FASTAProcessor():
             'gene_id', 'gene_name', 'chrom', 'start', 'end', 'transl_type',
             'CDS', 'ENSP', 'ENST',
             'uniprot_id', 'entry_type', 'Reviewed Entry Available', 'entry_name', 'gene_symbol', 'description',
-            'protein length', 'evidence', 'Suggested PE', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 'found_with', 'isoform', 'refSeq Number', 'Difference in lengths', 
-            'EC Number', 'Num Transmembrane Regions', 'Signal Peptide', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'Hydrophobicity', 'PI']
+            'protein length', 'evidence', 'Suggested PE', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 
+            'found_with', 'isoform', 'refSeq Number', 'Difference in lengths',
+            'EC Number', 'Num Transmembrane Regions', 'Signal Peptide', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'Hydrophobicity', 
+            'PI', 'Mass Spec ID', '3D-Structure', 'Disease Varient']
+
+
+
 
 
 
@@ -231,6 +236,13 @@ class FASTAProcessor():
         print("Genes to investigate ENSP numbers further")
         #Checks to see if the UniProt and Gencode Sequence are the same and assignes it if it is
         for index, row in self.gene_file.iterrows():
+            if isinstance(row['Key Words'], str):
+                self.gene_file.at[index, 'Key Words'] = re.sub(r',\s*$', '.', row['Key Words'].replace('[', "").replace("]", "").replace(";", ", ").replace("\'", "").replace(", ,", ", "))
+
+            else:
+                self.gene_file.at[index, 'Key Words'] = ""  # Assign an empty string or handle differently
+
+
             count += 1
         #Gets sequence if UniProt and Gencode Match
             if self.ensp_dict.get(row['ENSP'], {}).get('sequence', "Hello") == self.uniprot_dict.get(row['uniprot_id'], "World"):
@@ -372,8 +384,28 @@ class FASTAProcessor():
         print("Number of unreviewed entries", unreviewed)
 
 
+
+    def searchTags(self):
+        self.gene_file['Mass Spec ID'] = ''
+        self.gene_file['3D-Structure'] = ''
+        self.gene_file['Disease Varient'] = ''
+
+        for index, row in self.gene_file.iterrows():
+            words = row['Key Words']
+            if "3D-structure" in words:
+                self.gene_file.at[index, "3D-Structure"] = "Yes"
+
+            if "Proteomicsidentification" in words:
+                self.gene_file.at[index, "Mass Spec ID"] = "Yes"
+
+            if "Diseasevariant" in words:
+                self.gene_file.at[index, "Disease Varient"] = "Yes" 
+
+
+
     def tableMaker(self):
         #Building dataframes
+        self.searchTags()
         gene_file_selected = self.gene_file[self.columns_to_export]
 
         gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Cannonical Isoform","entry_type":"Reviewed"}) 
@@ -460,5 +492,5 @@ class FASTAProcessor():
         self.buildFasta()
 
 if __name__ == "__main__":
-    processor = FASTAProcessor()
+    processor = FASTAProcessor(47)
     processor.run()

@@ -15,15 +15,21 @@ class CleanDataProcessor:
     def makeList(self, collection):
         return collection.replace('[', '').replace(']', '').replace("'", '').strip().split(',')
     
+    def stringListToList(self, input_string):
+        return eval(input_string)
+
+
 
 
     def dataModifier(self):
         self.gene_data.columns = self.gene_data.columns.str.strip()
 
         #Since reading an excel file into a dataframe creates a single string, values  need to be re-seperated into lists
-        
         for i in self.columns:
             self.gene_data[i] = self.gene_data[i].apply(self.makeList)
+
+        #Needs to be specially made into list
+        self.gene_data["Key Words"] = self.gene_data["Key Words"].apply(self.stringListToList)
 
     def falseOverTrue(self):
         #Optimizes for using gene_id over gene_symbol. Catches any True gene_symbols and False gene_id enteries to store in diff file.
@@ -37,6 +43,7 @@ class CleanDataProcessor:
 
             if contains_id:
                 found_right = [types.strip() == 'gene_id' for types in found_type]
+
                 self.gene_data.at[index, 'uniprot_id'] = [row['uniprot_id'][i] for i in range(len(found_right)) if found_right[i]]  
                 self.gene_data.at[index, 'entry_name'] = [row['entry_name'][i] for i in range(len(found_right)) if found_right[i]]
                 self.gene_data.at[index, 'gene_symbol'] = [row['gene_symbol'][i] for i in range(len(found_right)) if found_right[i]]
@@ -52,6 +59,7 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(found_right)) if found_right[i]]
                 self.gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(found_right)) if found_right[i]]
                 self.gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(found_right)) if found_right[i]]
+                self.gene_data.at[index, 'Key Words'] = [row['Key Words'][i] for i in range(len(found_right)) if found_right[i]]
                 for i in range(len(found_type)):
                     if row['found_with'][i].strip()  == "gene_name" and row['entry_type'][i].strip():
                     
@@ -104,7 +112,7 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'found_with'] = [row['found_with'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
                 self.gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
                 self.gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
-
+                self.gene_data.at[index, 'Key Words'] = [row['Key Words'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
         #Makes sure that only the lowest  level of exsistance proteins are kept [1,1,4] --> [1,1]
         for index, row in self.gene_data.iterrows():
             if len(row['evidence']) > 1:
@@ -130,32 +138,7 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'found_with'] = [row['found_with'][i].strip() for i in range(len(keeper)) if keeper[i]]
                 self.gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i].strip() for i in range(len(keeper)) if keeper[i]]
                 self.gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(keeper)) if keeper[i]]
-
-        #Manually Assigns the correct UniProt ID to 9 protiens
-        manual_file = "manualFix.tsv"
-
-        manual_fix = pd.read_csv(manual_file, sep='\t')
-        manual_dict = manual_fix.set_index('Gene ID')['UniProt ID'].to_dict()
-
-        for index, row in self.gene_data.iterrows():
-            if row['gene_id'] in manual_dict:
-                        i = row['uniprot_id'].index(manual_dict[row['gene_id']])
-                        self.gene_data.at[index, 'uniprot_id'] = row['uniprot_id'][i]
-                        self.gene_data.at[index, 'entry_name'] = row['entry_name'][i]
-                        self.gene_data.at[index, 'gene_symbol'] = row['gene_symbol'][i]
-                        self.gene_data.at[index, 'description'] = row['description'][i]
-                        self.gene_data.at[index, 'protein length'] = row['protein length'][i]
-                        self.gene_data.at[index, 'evidence'] = row['evidence'][i]
-                        self.gene_data.at[index, 'entry_type'] = row['entry_type'][i]
-                        self.gene_data.at[index, 'ENSP'] = row['ENSP'][i]
-                        self.gene_data.at[index, 'ENST'] = row['ENST'][i]
-                        self.gene_data.at[index, 'isoform'] = row['isoform'][i]
-                        self.gene_data.at[index, 'EC Number'] = row['EC Number'][i]
-                        self.gene_data.at[index, 'Num Transmembrane Regions'] = row['Num Transmembrane Regions'][i]
-                        self.gene_data.at[index, 'found_with'] = row['found_with'][i]
-                        self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
-                        self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
-
+                self.gene_data.at[index, 'Key Words'] = [row['Key Words'][i] for i in range(len(keeper)) if keeper[i]]
 
 
 
@@ -183,7 +166,7 @@ class CleanDataProcessor:
                         self.gene_data.at[index, 'found_with'] = row['found_with'][i]
                         self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
                         self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
-
+                        self.gene_data.at[index, 'Key Words'] = row['Key Words'][i]
         
 
 
@@ -213,7 +196,7 @@ class CleanDataProcessor:
                             self.gene_data.at[index, 'found_with'] = row['found_with'][0]
                             self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
                             self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
-
+                            self.gene_data.at[index, 'Key Words'] = row['Key Words'][0]
         print("Number of repeats:", repeats)
 
         #Chooses highest CDS length when muiltiple entries could be a possible match
@@ -241,7 +224,7 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'found_with'] = row['found_with'][i]
                 self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
                 self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
-
+                self.gene_data.at[index, 'Key Words'] = row['Key Words'][i]
 
         
         #Cleans data so that is no longer a list
@@ -261,12 +244,21 @@ class CleanDataProcessor:
                             self.gene_data.at[index, 'found_with'] = row['found_with'][0]
                             self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
                             self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
+                            #self.gene_data.at[index, 'Key Words'] = row['Key Words'][0]
                             if row['isoform'][0] != None and not row['isoform'][0].startswith("ENSG"):
                                 self.gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                             else:
                                 self.gene_data.at[index, 'isoform'] = 'None'
 
 
+                            if row['Key Words'] and None not in row['Key Words']:
+                                if isinstance(row['Key Words'][0], list):
+                                    self.gene_data.at[index, 'Key Words'] = ", ".join(row['Key Words'][0]).replace(";", ", ")
+                                else:
+                                    self.gene_data.at[index, 'Key Words'] = ", ".join(row['Key Words']).replace(";", ", ")
+                            else:
+                                self.gene_data.at[index, 'Key Words'] = ""    
+                            self.gene_data.at[index, 'Key Words'] = str(self.gene_data.at[index, 'Key Words']).replace(";", " ,").replace("[", "").replace("]", "").replace(", ,", ",")          
 
 
     def makeTable(self):
