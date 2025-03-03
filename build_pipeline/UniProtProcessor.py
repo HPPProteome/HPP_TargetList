@@ -41,7 +41,7 @@ class UniProtProcessor:
         else:
             return False
         
-    #Creates a dictionary with the ensamble row, then picks the isoform(if present) found in UP000005640_9606.dat and gets the ensp, enst and ensg number
+    #Creates a dictionary with the ensamble row, then picks the isoform(if present) found in Uniprot.dat and gets the ensp, enst and ensg number
     def clean_string(self, s, id):
         gene_ids = []
         if not isinstance(s, str):
@@ -190,17 +190,27 @@ class UniProtProcessor:
     def datParser(self):
         with open(self.isoformFile) as UPfile:
             for line in UPfile:
+                    if "ID   " in line:
+                        changing_keys = []
+
                     if "AC   " in line:
-                        changing_keys = line.strip().replace(" ","").replace("AC","").split(";")   
-                        for key in changing_keys:
-                            self.key_words[key] = [] 
-                                
-                    if "KW   " in line:
+                        key_list  = line.strip().replace(" ", "").replace("AC","").split(";")   
+                        
+
+                        for key in key_list:
+                            if key not in self.key_words:
+                                self.key_words[key] = [] 
+                            if key not in changing_keys:
+                                changing_keys.append(key)
+
+                    elif "KW  " in line:
                         words = line.strip().replace(" ","").replace("KW","").replace(".",";")
 
                         for key in changing_keys:
                             if key in self.key_words:
-                                self.key_words[key].append(words) 
+                                self.key_words[key].append(words)
+                            if key == "Q5TA45":
+                                print(self.key_words[key])
 
                     if "Sequence=Displayed;" in line:
                             id = line.strip().replace(" ","").replace("CC","").split(";")[0].split("=")[1]
@@ -228,9 +238,9 @@ class UniProtProcessor:
                                     prefix = isoNum.split("-")[0]
                                     if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix] and prefix not in self.refSeqDict:
                                             self.refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
+                      
 
-
-
+        print(self.key_words)
 
     def uniprotParse(self):
         #Creates a list of all the genes from GENCODE and combines them with their IDs, memory created to hold data collected from UniProtKB
