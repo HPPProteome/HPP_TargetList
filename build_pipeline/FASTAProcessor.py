@@ -448,7 +448,7 @@ class FASTAProcessor():
         noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
         duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
         PE5_df.to_excel("PE5_Protiens.xlsx", index=False)
-
+        noUniprot_df.to_excel("No_UniprotKB_entries.xlsx", index=False)
         print("Tables made")
 
 

@@ -209,8 +209,6 @@ class UniProtProcessor:
                         for key in changing_keys:
                             if key in self.key_words:
                                 self.key_words[key].append(words)
-                            if key == "Q5TA45":
-                                print(self.key_words[key])
 
                     if "Sequence=Displayed;" in line:
                             id = line.strip().replace(" ","").replace("CC","").split(";")[0].split("=")[1]
@@ -240,7 +238,6 @@ class UniProtProcessor:
                                             self.refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
                       
 
-        print(self.key_words)
 
     def uniprotParse(self):
         #Creates a list of all the genes from GENCODE and combines them with their IDs, memory created to hold data collected from UniProtKB
@@ -279,9 +276,9 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['ENST'].append(row_dict[i]["trans_id"])
                                 self.gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
 
-                                self.gene_dict[gene]['EC Number'].append(row["EC number"])
-                                self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])   
-                                self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                                self.gene_dict[gene]['EC Number'].append(row.get("EC number", None))
+                                self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))   
+                                self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"])
                                 self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
@@ -299,9 +296,9 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['ENSP'].append(row_dict[i]["ensp"])
                                 self.gene_dict[gene]['ENST'].append(row_dict[i]["trans_id"])
                                 self.gene_dict[gene]['isoform'].append(row_dict[i]["isoform"])
-                                self.gene_dict[gene]['EC Number'].append(row["EC number"])
-                                self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
-                                self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                                self.gene_dict[gene]['EC Number'].append(row.get("EC number", None))
+                                self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))
+                                self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"]) 
                                 self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
@@ -319,9 +316,9 @@ class UniProtProcessor:
                         self.gene_dict[gene]['ENSP'].append(None)
                         self.gene_dict[gene]['ENST'].append(None) 
                         self.gene_dict[gene]['isoform'].append(self.isoformDict.get(row['Entry']))
-                        self.gene_dict[gene]['EC Number'].append(row["EC number"])
-                        self.gene_dict[gene]['Num Transmembrane Regions'].append(row["Transmembrane"])
-                        self.gene_dict[gene]['Signal Peptide'].append(row["Signal peptide"])
+                        self.gene_dict[gene]['EC Number'].append(row.get("EC number", None))
+                        self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))
+                        self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
                         self.gene_dict[gene]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry']))) 
                         self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
@@ -345,8 +342,8 @@ class UniProtProcessor:
                                             self.gene_dict[ensg]['description'].append(row['Protein names'])
                                             self.gene_dict[ensg]['protein length'].append(row['Length'])
                                             self.gene_dict[ensg]['gene_symbol'].append(name.strip())
-                                            self.gene_dict[ensg]['EC Number'].append(row["EC number"])
-                                            self.gene_dict[ensg]['Num Transmembrane Regions'].append(row["Transmembrane"])
+                                            self.gene_dict[ensg]['EC Number'].append(row.get("EC number", "None"))
+                                            self.gene_dict[ensg]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))
                                             self.gene_dict[ensg]['found_with'].append("gene_name")
                                             
                                             self.gene_dict[ensg]['reviewed'].append(row['Reviewed'])
@@ -357,7 +354,7 @@ class UniProtProcessor:
                                             self.gene_dict[ensg]['ENSP'].append(None)
                                             self.gene_dict[ensg]['ENST'].append(None)
                                             self.gene_dict[ensg]['isoform'].append(self.isoformDict.get(row['Entry Name']))
-                                            self.gene_dict[ensg]['Signal Peptide'].append(row["Signal peptide"])
+                                            self.gene_dict[ensg]['Signal Peptide'].append(row.get("Signal peptide", None))
                                             self.gene_dict[ensg]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry'])))
                                             self.gene_dict[ensg]['Key Words'].append(self.key_words.get(row['Entry']))
                                             symbol_count += 1 

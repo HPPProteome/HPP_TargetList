@@ -6,8 +6,8 @@ class fileRemover():
 
         self.output_files = ["atlasLink.xlsx", "sequence_table.xlsx", "Identical_UniProtKB_entries.xlsx", "No_Fasta_entry.xlsx", 
                         "cleaned_table.xlsx", "uniprot_output.xlsx", "updatedPE.xlsx", "False_ensg_over_name.xlsx", 
-                        "manualFix.tsv", "protien_coding_genes.xlsx", "PE5_Protiens.xlsx", "Supplemental_table_1.xlsx", "coding_genes.fasta"]
-        self.downloaded_files = ["gencode.annotation.gtf.gz", "uniprot.tsv.gz", "rna_tissue_consensus.tsv.zip", "UP000005640_9606.dat", "UP000005640_9606.dat.gz",
+                        "manualFix.tsv", "protien_coding_genes.xlsx", "PE5_Protiens.xlsx", "Supplemental_table_1.xlsx", "coding_genes.fasta", "No_UniprotKB_entries.xlsx"]
+        self.downloaded_files = ["gencode.annotation.gtf.gz", "uniprot.tsv.gz", "rna_tissue_consensus.tsv.zip", "Uniprot.dat", "Uniprot.dat.gz",
                             "uniprot.fa", "gencode.pc_translations.fa.gz", "peptideAtlas.tsv", "Secoundary_peptideAtlas.tsv"]
 
     def removeDownloads(self):
