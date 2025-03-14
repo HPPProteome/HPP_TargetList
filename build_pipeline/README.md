@@ -9,7 +9,7 @@ git clone https://github.com/HPPProteome/HPP_TargetList/
 
 cd HPP_TargetList/build_pipeline 
 
-python RUN_ME.py
+python build.py --build
 ```
 If you have a specific file you want to run the code in:
 ```bash
@@ -19,7 +19,7 @@ mkdir -p ~/folder_name
 
 cd ~/folder_name
 
-python build.py --build
+python ~/HPP_TargetList/build_pipeline/build.py --build
 ```
 
 # All Processors and their expected output:
