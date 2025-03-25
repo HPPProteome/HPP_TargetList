@@ -10,3 +10,5 @@
 4. Notebook should open and be ready to run
 
 5.  Click on the "[  ]" in the top left of each section to execute the code that section
+   <img width="1254" alt="image" src="https://github.com/user-attachments/assets/385f7a67-9ce4-4b57-a99a-17e7a23e9d3e" />
+
