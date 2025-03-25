@@ -8,3 +8,5 @@
 3. Enter this URL: https://github.com/HPPProteome/HPP_TargetList/blob/main/machine_learning/SeeProteinPredictor.ipynb
 
 4. Notebook should open and be ready to run
+
+5.  Click on the "[  ]" in the top left of each section to execute the code that section
