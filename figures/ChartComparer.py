@@ -39,16 +39,16 @@ class ComparisonChart():
 
         #Old Table
         for index, row in self.old_genes.iterrows():
-            self.old_all_genes.add(row['Gene Id'])
+            self.old_all_genes.add(row['Gene ID'])
 
-            if str(row['PE_score']) == '1':
-                self.old_PE1.add(row['Gene Id'])
+            if str(row['PE']) == '1':
+                self.old_PE1.add(row['Gene ID'])
 
-            elif str(row['PE_score']) == '5':
-                self.old_PE5.add(row['Gene Id'])
+            elif str(row['PE']) == '5':
+                self.old_PE5.add(row['Gene ID'])
 
             else:
-                self.old_MP.add(row['Gene Id'])
+                self.old_MP.add(row['Gene ID'])
     
 
 
@@ -143,42 +143,54 @@ class ComparisonChart():
         gainedGenes = self.new_all_genes - self.old_all_genes
         
         # lost
+        ax.annotate("",
+                    xy=(-0.95,-0.5), xytext=(-0.95, 2.8),
+                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
+        ax.text(-0.45, 3.35, f"lost", ha='center', va='center', fontsize=11, color='black')
+
         if len(lostGenes & self.old_PE1) >= 0:
             ax.annotate("",
                     xy=(-1, 2.75), xytext=(0,2.75),
-                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(-0.45, 2.9, f"- {len(lostGenes & self.old_PE1)}", ha='center', va='center', fontsize=10, color='black')
+                    arrowprops=dict(color='black', arrowstyle="-", lw=1))
+            ax.text(-0.45, 2.9, f"{len(lostGenes & self.old_PE1)}", ha='center', va='center', fontsize=10, color='black')
 
         if len(lostGenes & self.old_MP) >= 0:
             ax.annotate("",
                     xy=(-1, 1.2), xytext=(0, 1.2),
-                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(-0.45, 1.35, f"- {len(lostGenes & self.old_MP)}", ha='center', va='center', fontsize=10, color='black')
+                    arrowprops=dict(color='black', arrowstyle="-", lw=1))
+            ax.text(-0.45, 1.35, f"{len(lostGenes & self.old_MP)}", ha='center', va='center', fontsize=10, color='black')
 
         if len(lostGenes & self.old_PE5) >= 0:
             ax.annotate("",
                     xy=(-1, 0.3), xytext=(0, 0.3),
-                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(-0.45, 0.45, f"- {len(lostGenes & self.old_PE5)}", ha='center', va='center', fontsize=10, color='black')
+                    arrowprops=dict(color='black', arrowstyle="-", lw=1))
+            ax.text(-0.45, 0.45, f"{len(lostGenes & self.old_PE5)}", ha='center', va='center', fontsize=10, color='black')
 
         #Gained
+
+
+        ax.annotate("",
+                    xy=(6.95, 4), xytext=(6.95,0.25),
+                    arrowprops=dict(color='red', arrowstyle="-", lw=1))
+        ax.text(6.9, 4.2, "new", ha='center', va='center', fontsize=11, color='black')
+        
         if len(gainedGenes & self.new_PE1) >= 0:
             ax.annotate("",
                     xy=(6, 2.75), xytext=(7,2.75),
-                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(6.5, 2.9, f"+ {len(gainedGenes & self.new_PE1)}", ha='center', va='center', fontsize=10, color='black')
+                    arrowprops=dict(color='royalblue', arrowstyle="->", lw=1))
+            ax.text(6.5, 2.9, f"{len(gainedGenes & self.new_PE1)}", ha='center', va='center', fontsize=10, color='royalblue')
 
         if len(gainedGenes & self.new_MP) >= 0:
             ax.annotate("",
                     xy=(6, 1.2), xytext=(7, 1.2),
                     arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(6.5, 1.35, f"+ {len(gainedGenes & self.new_MP)}", ha='center', va='center', fontsize=10, color='black')
+            ax.text(6.5, 1.35, f"{len(gainedGenes & self.new_MP)}", ha='center', va='center', fontsize=10, color='black')
 
         if len(gainedGenes & self.new_PE5) >= 0:
             ax.annotate("",
                     xy=(6, 0.3), xytext=(7, 0.3),
-                    arrowprops=dict(color='black', arrowstyle="->", lw=1))
-            ax.text(6.5, 0.45, f"+ {len(gainedGenes & self.new_PE5)}", ha='center', va='center', fontsize=10, color='black')
+                    arrowprops=dict(color='red', arrowstyle="->", lw=1))
+            ax.text(6.5, 0.45, f"{len(gainedGenes & self.new_PE5)}", ha='center', va='center', fontsize=10, color='black')
 
         ax.set_xlim(-1, 7)
         ax.set_ylim(-1, 5)
@@ -189,4 +201,5 @@ class ComparisonChart():
     def run(self):
         self.readData()
         self.draw_rectangles()
+
 
