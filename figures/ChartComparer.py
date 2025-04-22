@@ -41,15 +41,15 @@ class ComparisonChart():
         for index, row in self.old_genes.iterrows():
             self.old_all_genes.add(row['Gene ID'])
 
-            if str(row['PE']) == '1':
+            if row['PE'] == 1:
                 self.old_PE1.add(row['Gene ID'])
 
-            elif str(row['PE']) == '5':
+            elif row['PE'] == 5:
                 self.old_PE5.add(row['Gene ID'])
 
             else:
                 self.old_MP.add(row['Gene ID'])
-    
+            
 
 
     def draw_rectangles(self):
@@ -201,5 +201,4 @@ class ComparisonChart():
     def run(self):
         self.readData()
         self.draw_rectangles()
-
 
