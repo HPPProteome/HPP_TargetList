@@ -1,14 +1,14 @@
 # List of Runable Scripts:
 
-[ChartBuilder.py](#chartBuilder)
+ChartBuilder.py
 
-[figureMaker.py](#figureMaker.py)
+figureMaker.py
 
-[target_list_plots_individualversion.py](#target_list_plots_individualversion.py)
+target_list_plots_individualversion.py
 
-[target_list_plots_multipanelversion.py](#target_list_plots_multipanelversion.py)
+target_list_plots_multipanelversion.py
 
-[underrepresented_protein_groups_plot.py](#underrepresented_protein_groups_plot.py)
+underrepresented_protein_groups_plot.py
 
 
 # chartBuilder.py
@@ -17,6 +17,9 @@
 ### How to run 
 
 ```
+python chartBuilder.py --previousFile [file name] --newFile [file name]
+
+Example:
 python chartBuilder.py --previousFile SupplemntryTableV46.xlsx --newFile SupplemntryTableV47.xlsx
 
 ```
