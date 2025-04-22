@@ -28,7 +28,8 @@ python chartBuilder.py --previousFile SupplemntryTableV46.xlsx --newFile Supplem
 - Outputs an SVG file named `ComparedImage.svg` that visualizes the change between the two years. **You may have edit the code to change what year is displayed**.
 Example:
 
-![image](https://github.com/user-attachments/assets/5b1820c5-b979-4fcc-9a58-59da126e878c)
+![image](https://github.com/user-attachments/assets/76372b1a-7f5b-4546-919f-91e1fcc7ff74)
+
 
 # FigureMaker.py
 
