@@ -6,22 +6,33 @@ import pandas as pd
 import subprocess
 import re
 import sys
+from Bio import SeqIO
+
 
 class UniProtProcessor:
     def __init__(self):
         self.uniprot_file = "uniprot.tsv.gz"
         self.gene_file = "protien_coding_genes.xlsx"
         self.isoformFile = "Uniprot.dat"
+        
         self.output_file = "uniprot_output.xlsx"
         
         self.gene_df = pd.read_excel(self.gene_file)
-        self.uniprot_genes = pd.DataFrame()
+        self.uniprot_genes = pd.read_csv(self.uniprot_file, sep='\t')
         
         self.gene_dict = {}
         self.key_words = {} #UniProtID (s) : Associated tags
         self.isoformDict = {} # UniProtID : Cannonical Isoform
         self.refSeqDict = {}  #Isoform : refSequence
 
+
+        self.gencode_fasta = "gencode.pc_translations.fa.gz"
+        self.uniprot_fasta = "uniprot.fa"
+        self.added = 0
+        self.gencode_seq = {} #Stored ensgNum{sequence:ENSP}
+        self.uniprot_seq = {} #Stores sequence:ID
+
+        self.exceptions_dict = {"Q6UXT6":"ENSG00000228336", "P20810":"ENSG00000310517"}
 
     def level_converter(self, description):
         if 'protein level' in description:
@@ -107,78 +118,6 @@ class UniProtProcessor:
             return None
         
 
-    def downloadUniprot(self):
-        #Checks for and downloads UniProtKB tsv file
-        print("Looking for uniprot gene file")
-        if os.path.exists(self.uniprot_file):
-                print("TSV  File Found")
-
-        else:
-                print(f"Downloading {self.uniprot_file}")
-                url = "https://rest.uniprot.org/uniprotkb/stream?compressed=true&fields=accession%2Creviewed%2Clength%2Cprotein_existence%2Cxref_ensembl_full%2Cid%2Cgene_names%2Cprotein_name%2Cft_transmem%2Cec%2Cft_signal&format=tsv&query=%28organism_id%3A9606%29"
-                output_gz_file = "uniprot.tsv.gz"
-                print("Downloading", url)
-                attempt = 0
-                max_attempt = 3
-
-                while attempt < max_attempt:
-                        try:
-                                response = requests.get(url, stream=True)
-                                response.raise_for_status()
-                                with open(output_gz_file, 'wb') as f:
-                                        f.write(response.content)
-                                print("Downloaded", output_gz_file)
-                                break
-                        except requests.exceptions.Timeout:
-                                attempt += 1
-                                print(f"Request timed out, trying again: {attempt}/{max_attempt}")
-                        except requests.exceptions.RequestException as e:
-                                print("Error", e)
-                                break
-                if attempt == max_attempt:
-                        print("Attempt to download file timed out too many times. File not downloaded")
-                        sys.exit("Exiting Program")
-        self.uniprot_genes = pd.read_csv(self.uniprot_file, sep='\t')
-    
-    def downloadDat(self):
-        #Checks for and downloads UniProtKB .dat file
-        print("Looking for uniprot dat file")
-        gz_filename = self.isoformFile + ".gz"
-        
-
-        if os.path.exists(self.isoformFile):
-            print("DAT File Found")
-        else:
-            print(f"Downloading {gz_filename}")
-            url = "https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000005640/UP000005640_9606.dat.gz"
-            print("Downloading", url)
-            attempt = 0
-            max_attempt = 3
-
-            while attempt < max_attempt:
-                try:
-                    response = requests.get(url, stream=True, timeout=10)
-                    response.raise_for_status()
-                    with open(gz_filename, 'wb') as f:
-                        f.write(response.content)
-                    print("Downloaded", gz_filename)
-                    break
-                except requests.exceptions.Timeout:
-                    attempt += 1
-                    print(f"Request timed out, trying again: {attempt}/{max_attempt}")
-                except requests.exceptions.RequestException as e:
-                    print("Error", e)
-                    break
-            
-            if attempt == max_attempt:
-                print("Attempt to download file timed out too many times. File not downloaded")
-                sys.exit("Exiting Program")
-            
-            print("Decompressing file")
-            with gzip.open(gz_filename, "rb") as f_in:
-                with open(self.isoformFile, "wb") as f_out:
-                    shutil.copyfileobj(f_in, f_out)
-            print(f"Decompressed: {self.isoformFile}")
 
 
     def uniprotMod(self):
@@ -238,6 +177,29 @@ class UniProtProcessor:
                                             self.refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
                       
 
+    def sequenceLoader(self):
+         
+    
+        for record in SeqIO.parse(self.uniprot_fasta, "fasta"):
+                    header_parts = record.description.split('|')
+                    id = header_parts[1]
+                    seq = str(record.seq)
+                    self.uniprot_seq[seq] = id
+
+        with gzip.open(self.gencode_fasta, "rt") as unzipped_fasta:
+                    for record in SeqIO.parse(unzipped_fasta, "fasta"):
+                        header_parts = record.description.split('|')
+                        ensp_number = header_parts[0]
+                        ensg_number = header_parts[2].split(".")[0]
+                        enst_number = header_parts[1]
+                        seq = str(record.seq)
+
+                        if ensg_number not in self.gencode_seq:
+                            self.gencode_seq[ensg_number] = {}
+                        self.gencode_seq[ensg_number][seq] = [ensp_number, enst_number]
+        print("Files read")
+        print("\nENSG numbers assigned:")
+
 
     def uniprotParse(self):
         #Creates a list of all the genes from GENCODE and combines them with their IDs, memory created to hold data collected from UniProtKB
@@ -248,8 +210,8 @@ class UniProtProcessor:
         print("Number of genes from GENCODE:", len(self.gene_dict))
         self.uniprotMod()
         print("Making connections with gene ids")
+
         # Has correct UniprotKB ID and the ENSG Number, hand chosen gene
-        exceptions_dict = {"Q6UXT6":"ENSG00000228336"}
 
         #collects data from UniProtKB
         count = 0
@@ -302,25 +264,26 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"]) 
                                 self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
 
-            if row['Entry'] in exceptions_dict:
-                        gene = exceptions_dict[row['Entry']]
-                        self.gene_dict[gene]['reviewed'].append(row['Reviewed'])
-                        self.gene_dict[gene]['entry_name'].append(row['Entry Name'])
-                        self.gene_dict[gene]['uniprot_id'].append(row['Entry'])
-                        self.gene_dict[gene]['description'].append(row['Protein names'])
-                        self.gene_dict[gene]['protein length'].append(row['Length'])
-                        self.gene_dict[gene]['gene_symbol'].append(row['Gene Names'])
-                        self.gene_dict[gene]['found_with'].append("gene_id")
-                        self.gene_dict[gene]['evidence'].append(row['Protein existence'])
-                        self.gene_dict[gene]['entry_type'].append(row['Reviewed'])
-                        self.gene_dict[gene]['ENSP'].append(None)
-                        self.gene_dict[gene]['ENST'].append(None) 
-                        self.gene_dict[gene]['isoform'].append(self.isoformDict.get(row['Entry']))
-                        self.gene_dict[gene]['EC Number'].append(row.get("EC number", None))
-                        self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))
-                        self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
-                        self.gene_dict[gene]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry']))) 
-                        self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
+            if row['Entry'] in self.exceptions_dict:
+                        print("exceptions_dict used")
+                        gene = self.exceptions_dict[row['Entry']]
+                        self.gene_dict[gene]['reviewed'] = [row['Reviewed']]
+                        self.gene_dict[gene]['entry_name'] = [row['Entry Name']]
+                        self.gene_dict[gene]['uniprot_id'] = [row['Entry']]
+                        self.gene_dict[gene]['description'] = [row['Protein names']]
+                        self.gene_dict[gene]['protein length'] = [row['Length']]
+                        self.gene_dict[gene]['gene_symbol'] = [row['Gene Names']]
+                        self.gene_dict[gene]['found_with'] = ["Hand Selected"]
+                        self.gene_dict[gene]['evidence'] = [row['Protein existence']]
+                        self.gene_dict[gene]['entry_type'] = [row['Reviewed']]
+                        self.gene_dict[gene]['ENSP'] = [None]
+                        self.gene_dict[gene]['ENST'] = [None] 
+                        self.gene_dict[gene]['isoform'] = [self.isoformDict.get(row['Entry'])]
+                        self.gene_dict[gene]['EC Number'] = [row.get("EC number", None)]
+                        self.gene_dict[gene]['Num Transmembrane Regions'] = [row.get("Transmembrane", "None")]
+                        self.gene_dict[gene]['Signal Peptide'] = [row.get("Signal peptide", "None")]
+                        self.gene_dict[gene]['refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(row['Entry']))] 
+                        self.gene_dict[gene]['Key Words'] = [self.key_words.get(row['Entry'])]
 
         print("Making connections with gene symbols")
         gene_symbols_dict = {}
@@ -335,7 +298,7 @@ class UniProtProcessor:
                 if name.strip() in gene_symbols_dict:
                                 ensg = gene_symbols_dict[name.strip()]
 
-                                if self.gene_dict[ensg]['found_with'] == [] or (True not in self.gene_dict[ensg]['reviewed'] and row['Reviewed']): 
+                                if self.gene_dict[ensg]['found_with'] == [] or (True not in self.gene_dict[ensg]['reviewed'] and row['Reviewed']) or (row['Reviewed'] and "gene_name" in self.gene_dict[ensg]['found_with']): 
                                             #print(gene_dict[i]['gencode_symbol'], ids)
                                             self.gene_dict[ensg]['entry_name'].append(row['Entry Name'])
                                             self.gene_dict[ensg]['uniprot_id'].append(row['Entry'])
@@ -358,6 +321,10 @@ class UniProtProcessor:
                                             self.gene_dict[ensg]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry'])))
                                             self.gene_dict[ensg]['Key Words'].append(self.key_words.get(row['Entry']))
                                             symbol_count += 1 
+
+
+
+        
         extra = 0
         not_found = 0
         #Checks for empty ENSG numbers
@@ -371,23 +338,69 @@ class UniProtProcessor:
         print("Num of non_reviewed", extra)
         #print("Num found with symbol", symbol_count)
         print("Num empty", not_found)
-        print("Number of rows with 2 or more:", rows)                    
+        print("Number of rows with 2 or more:", rows)   
+        self.gene_table = pd.DataFrame(self.gene_dict).T
+        self.merged_df = pd.merge(self.gene_df, self.gene_table, on='gene_id', how='inner')
+
+    def SequenceLink(self):
+        print("\nMaking connections via amino acid sequences\n")
+        self.sequenceLoader()
+        for index, row in self.merged_df.iterrows():
+            if not row['uniprot_id']:
+                possible_seq = self.gencode_seq[row['gene_id']]
+                for sequence in possible_seq:
+                    if sequence in self.uniprot_seq:
+                        uniprot_id = self.uniprot_seq[sequence]
+                        ensp = possible_seq[sequence][0]
+                        enst = possible_seq[sequence][1]
+                        self.merged_df.at[index, 'uniprot_id'] = [uniprot_id]
+                        self.merged_df.at[index, 'ENSP'] = [ensp]
+                        self.merged_df.at[index, 'ENST'] = [enst]
+                        
+                        information = self.uniprot_genes[self.uniprot_genes['Entry'] == uniprot_id]
+
+                        self.merged_df.at[index, 'reviewed'] = [information['Reviewed'].values[0]]
+                        self.merged_df.at[index, 'entry_name'] = [information['Entry Name'].values[0]]
+                        self.merged_df.at[index, 'gene_symbol'] = [information['Gene Names'].values[0]]
+                        self.merged_df.at[index, 'description'] = [information['Protein names'].values[0]]
+                        self.merged_df.at[index, 'protein length'] = [information['Length'].values[0]]
+
+                        self.merged_df.at[index, 'entry_type'] = [information['Reviewed'].values[0]]
+                        self.merged_df.at[index, 'evidence'] = [information['Protein existence'].values[0]]
+
+                        self.merged_df.at[index, 'found_with'] = ["Sequence"]
+                        self.merged_df.at[index, 'isoform'] = [self.isoformDict.get(uniprot_id)]
+            
+
+                        self.merged_df.at[index, 'EC Number'] = [information["EC number"].values[0]]
+                        self.merged_df.at[index, 'Num Transmembrane Regions'] = [information["Transmembrane"].values[0]]
+                        self.merged_df.at[index, 'Signal Peptide'] = [information["Signal peptide"].values[0]]
+                        self.merged_df.at[index, 'refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(uniprot_id))]
+                        self.merged_df.at[index, 'Key Words'] = [self.key_words.get(uniprot_id)]
+                        
+
+
+                        self.added += 1
+                        print(f"{row['gene_id']}: {uniprot_id}")
+                        
+                        break
 
     def tableBuilder(self):
         print(f"Making Table: {self.output_file}")
-        final_frame = pd.DataFrame(self.gene_dict).T
 
-        merged_df = pd.merge(self.gene_df, final_frame, on='gene_id', how='inner')
+        
 
-        merged_df.to_excel(self.output_file)
+        self.merged_df.to_excel(self.output_file)
         print("File made")  
         
     def run(self):
-         self.downloadUniprot()
-         self.downloadDat()
+         print("Parsing Files")
          self.datParser()
+         print("Matching ENSG with UniprotKB IDs through Ensamble")
          self.uniprotParse()
+         self.SequenceLink()
          self.tableBuilder()
+
 
 if __name__ == "__main__":
     processor = UniProtProcessor()

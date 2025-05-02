@@ -31,6 +31,7 @@ class CleanDataProcessor:
         #Needs to be specially made into list
         self.gene_data["Key Words"] = self.gene_data["Key Words"].apply(self.stringListToList)
 
+
     def falseOverTrue(self):
         #Optimizes for using gene_id over gene_symbol. Catches any True gene_symbols and False gene_id enteries to store in diff file.
         #Will keep False gene_id over True gene_symbol entry.

@@ -6,10 +6,10 @@ import sys
 
 class PeptideAtlasProcessor:
     def __init__(self):
-        self.atlas_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping/query_zsun_20241030-091733-695.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_zsun_20241030-091733-695&rs_page_size=1000000&output_mode=tsv"
-        self.backup_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins/query_edeutsch_20250117-134052-808.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_edeutsch_20250117-134052-808&rs_page_size=1000000&output_mode=tsv"
-        self.atlas_file = "peptideAtlas.tsv"
-        self.backup_atlas_file = "Secoundary_peptideAtlas.tsv"
+        self.PeptideAtlas_core_proteome_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping?mapping_id=116&atlas_build_id=592&redundancy_constraint=on&QUERY_NAME=AT_GetCoreProteomeMapping&apply_action=QUERY&output_mode=tsv"
+        self.PeptideAtlas_all_proteins_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins?row_limit=5000000&atlas_build_id=592&organism_id=2&apply_action=QUERY&output_mode=tsv"
+        self.core_atlas_file  = "peptideAtlas.tsv"
+        self.all_atlas_file  = "Secoundary_peptideAtlas.tsv"
         self.gene_file = "updatedPE.xlsx"
         self.gene_df = None
         self.atlas_dict = {}
@@ -20,7 +20,7 @@ class PeptideAtlasProcessor:
         while attempt < max_attempts:
             try:
                 print(f"Downloading {filename} from Peptide Atlas")
-                response = requests.get(url, stream=True, timeout=10)
+                response = requests.get(url, stream=True, timeout=30)
                 response.raise_for_status()
                 with open(filename, "wb") as file:
                     file.write(response.content)
@@ -35,28 +35,22 @@ class PeptideAtlasProcessor:
         sys.exit("Exiting program")
         
     def ensure_files_exist(self):
-        if not os.path.exists(self.atlas_file):
-            self.download_file(self.atlas_url, self.atlas_file)
+        if not os.path.exists(self.core_atlas_file):
+            self.download_file(self.PeptideAtlas_core_proteome_url, self.core_atlas_file)
         else:
             print("Peptide Atlas file found")
         
-        if not os.path.exists(self.backup_atlas_file):
-            self.download_file(self.backup_url, self.backup_atlas_file)
+        if not os.path.exists(self.all_atlas_file):
+            self.download_file(self.PeptideAtlas_all_proteins_url, self.all_atlas_file)
         else:
             print("Secondary Atlas file found")
         
-        if not os.path.exists(self.gene_file):
-            print(f"Can't find {self.gene_file}, running update_PE.py")
-            try:
-                subprocess.run(['python3', 'update_PE.py'], check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"Error while running update_PE.py: {e}")
         print(f"{self.gene_file} found")
         
     def load_data(self):
         self.gene_df = pd.read_excel(self.gene_file)
-        atlas_df = pd.read_csv(self.atlas_file, sep='\t')
-        secound_atlas_df = pd.read_csv(self.backup_atlas_file, sep='\t', low_memory=False)
+        atlas_df = pd.read_csv(self.core_atlas_file, sep='\t')
+        secound_atlas_df = pd.read_csv(self.all_atlas_file, sep='\t', low_memory=False)
         
         for _, row in atlas_df.iterrows():
             if isinstance(row['Ensembl_Accession'], str):
