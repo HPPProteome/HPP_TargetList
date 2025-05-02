@@ -1,5 +1,7 @@
 import argparse
 import os
+
+from DownloadProcessor import fileDownloader
 from GENCODEProcessor import GENCODEProcessor
 from UniProtProcessor import UniProtProcessor
 from CleanDataProcessor import CleanDataProcessor
@@ -7,6 +9,7 @@ from ProteinAtlasProcessor import ProteinAtlasProcessor
 from PeptideAtlasProcessor import PeptideAtlasProcessor
 from FASTAProcessor import FASTAProcessor
 from PurgeProcessor import fileRemover
+
 
 def main():
     parser = argparse.ArgumentParser(description="Combines data from GENCODE, UniProtKB, PeptideAtlas and ProteinAtlas to build Supplementry table 1")
@@ -24,6 +27,9 @@ def main():
     
     if args.build:
        #Initializes and runs each processor before moving to the next one
+        print("\n ______DOWNLOADING ALL NEEDED FILES______ \n")
+        file_processor = fileDownloader(version=args.version)
+        file_processor.run()
 
         if not os.path.exists("protien_coding_genes.xlsx"):
             print("\n ______RUNNING GENCODE PROCESSOR______ \n")
@@ -51,6 +57,7 @@ def main():
             peptide_atlas_processor = PeptideAtlasProcessor()
             peptide_atlas_processor.run()
         
+
         if not os.path.exists("Supplemental_table_1.xlsx"):
             print("\n ______RUNNING FASTA PROCESSOR______ \n")
             fasta_processor = FASTAProcessor(version=args.version)
