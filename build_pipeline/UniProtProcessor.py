@@ -14,6 +14,7 @@ class UniProtProcessor:
         self.uniprot_file = "uniprot.tsv.gz"
         self.gene_file = "protien_coding_genes.xlsx"
         self.isoformFile = "Uniprot.dat"
+        self.additional_isoformFile = "additional_datFile.dat"
         
         self.output_file = "uniprot_output.xlsx"
         
@@ -80,7 +81,6 @@ class UniProtProcessor:
 
                 if id not in self.isoformDict:
                     if id not in printed_isoforms:
-                        print(id)
                         printed_isoforms.add(id)
                     gene_ids.append({"gene_id":seperate_ids[2].split(".")[0], "trans_id":None, "ensp":None, "isoform":seperate_ids[2].split(".")[2].replace("[","").replace("]",""), "refSeq":None})
                 elif self.isoformDict[id] == isoform:
@@ -125,7 +125,6 @@ class UniProtProcessor:
             if row["UP id"] not in self.exceptions_dict:
                 self.exceptions_dict[row["UP id"]] = []
             self.exceptions_dict[row["UP id"]].append(row["ENSG identifier"])
-        print(self.exceptions_dict)
 
 
     def uniprotMod(self):
@@ -134,28 +133,37 @@ class UniProtProcessor:
         self.uniprot_genes['Transmembrane'] = self.uniprot_genes['Transmembrane'].apply(self.transmem_counter)
         self.uniprot_genes['Signal peptide'] = self.uniprot_genes['Signal peptide'].apply(self.isolateSignal)
 
-    def datParser(self):
-        with open(self.isoformFile) as UPfile:
+    def datParser_function(self, file):
+        with open(file) as UPfile:
             for line in UPfile:
                     if "ID   " in line:
                         changing_keys = []
 
                     if "AC   " in line:
-                        key_list  = line.strip().replace(" ", "").replace("AC","").split(";")   
-                        
+                        accession_data = line[5:].strip()  # skips "AC   "
+                        key_list = [k.strip() for k in accession_data.split(";") if k.strip()]                        
 
                         for key in key_list:
                             if key not in self.key_words:
-                                self.key_words[key] = [] 
+                                self.key_words[key] = {"Key Words": [], "PPI":0, "Main ID":""} #Creates a space to hold info about key words and number of protien protien interaction 
                             if key not in changing_keys:
                                 changing_keys.append(key)
+                        
 
                     elif "KW  " in line:
                         words = line.strip().replace(" ","").replace("KW","").replace(".",";")
 
                         for key in changing_keys:
                             if key in self.key_words:
-                                self.key_words[key].append(words)
+                                self.key_words[key]["Key Words"].append(words)
+                            
+                            if self.key_words[key]["Main ID"] == "":
+                                self.key_words[key]["Main ID"] = changing_keys[0] 
+
+                    if "IntAct=" in line:
+                        for key in changing_keys:
+                            self.key_words[key]["PPI"] += 1
+
 
                     if "Sequence=Displayed;" in line:
                             id = line.strip().replace(" ","").replace("CC","").split(";")[0].split("=")[1]
@@ -183,7 +191,9 @@ class UniProtProcessor:
                                     prefix = isoNum.split("-")[0]
                                     if prefix in self.isoformDict and isoNum  == self.isoformDict[prefix] and prefix not in self.refSeqDict:
                                             self.refSeqDict[isoNum] = re.search(r"NM_(.*?);", line).group().replace(";","")
-                      
+    def datParser(self):
+        self.datParser_function(self.isoformFile)
+        self.datParser_function(self.additional_isoformFile)
 
     def sequenceLoader(self):
          
@@ -215,18 +225,17 @@ class UniProtProcessor:
         id_list = self.gene_df['gene_id'].tolist()
         name_list = self.gene_df['gene_name'].tolist()
         for i in range(len(id_list)):
-            self.gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[], "refSeq Number":[], "Key Words":[]}
+            self.gene_dict[id_list[i]] = {"gene_id": id_list[i], "genecode_name": name_list[i], "gencode_symbol": None, "ENSP": [], "ENST":[], "uniprot_id": [], "reviewed": [], "entry_name": [], "gene_symbol": [], "description": [], "protein length": [], "entry_type": [], "evidence": [], "found_with": [], "isoform":[], "EC Number":[], "Num Transmembrane Regions":[], "Signal Peptide":[], "refSeq Number":[], "Key Words":[], "PPI":[], "Main ID":[]}
         print("Number of genes from GENCODE:", len(self.gene_dict))
         self.uniprotMod()
         print("Making connections with gene ids")
-
+        print(f"Exceptions dict should be used {len(self.exceptions_dict)} times")
         # Has correct UniprotKB ID and the ENSG Number, hand chosen gene
 
         #collects data from UniProtKB
         count = 0
         rows = 0
         #Links GENCODE genes to UniProtKB IDs through ENSG numbers 
-        print("Selected UniProtIDs that have no listed Cannonical Isoform")
         for index, row in self.uniprot_genes.iterrows():
             row_dict = self.clean_string(row['Ensembl'], row['Entry'])
             if len(row_dict) >= 2:
@@ -251,10 +260,13 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))   
                                 self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"])
-                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
+                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present"))
+                                self.gene_dict[gene]['PPI'].append(self.key_words.get(row['Entry'], {}).get("PPI", "Not Present"))
+                                self.gene_dict[gene]['Main ID'].append(self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present"))
+
 
                                 count +=1
-                elif gene in self.gene_dict and True not in self.gene_dict[gene]['reviewed']:
+                elif gene in self.gene_dict and (True not in self.gene_dict[gene]['reviewed'] or ('gene_id' in self.gene_dict[gene]['found_with'] and row['Reviewed'])):
                                 self.gene_dict[gene]['reviewed'].append(row['Reviewed'])
                                 self.gene_dict[gene]['entry_name'].append(row['Entry Name'])
                                 self.gene_dict[gene]['uniprot_id'].append(row['Entry'])
@@ -271,7 +283,9 @@ class UniProtProcessor:
                                 self.gene_dict[gene]['Num Transmembrane Regions'].append(row.get("Transmembrane", "None"))
                                 self.gene_dict[gene]['Signal Peptide'].append(row.get("Signal peptide", "None"))
                                 self.gene_dict[gene]['refSeq Number'].append(row_dict[i]["refSeq"]) 
-                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry']))
+                                self.gene_dict[gene]['Key Words'].append(self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present"))
+                                self.gene_dict[gene]['PPI'].append(self.key_words.get(row['Entry'], {}).get("PPI", "Not Present"))
+                                self.gene_dict[gene]['Main ID'].append(self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present"))
 
             if row['Entry'] in self.exceptions_dict:
                         print("exceptions_dict used")
@@ -292,8 +306,11 @@ class UniProtProcessor:
                             self.gene_dict[gene]['EC Number'] = [row.get("EC number", None)]
                             self.gene_dict[gene]['Num Transmembrane Regions'] = [row.get("Transmembrane", "None")]
                             self.gene_dict[gene]['Signal Peptide'] = [row.get("Signal peptide", "None")]
-                            self.gene_dict[gene]['refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(row['Entry']))] 
-                            self.gene_dict[gene]['Key Words'] = [self.key_words.get(row['Entry'])]
+                            self.gene_dict[gene]['refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(row['Entry']))]
+ 
+                            self.gene_dict[gene]['Key Words'] = [self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present")]
+                            self.gene_dict[gene]['PPI'] = [self.key_words.get(row['Entry'], {}).get("PPI", "Not Present")]
+                            self.gene_dict[gene]['Main ID'] = [self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present")]
 
         print("Making connections with gene symbols")
         gene_symbols_dict = {}
@@ -329,7 +346,11 @@ class UniProtProcessor:
                                             self.gene_dict[ensg]['isoform'].append(self.isoformDict.get(row['Entry Name']))
                                             self.gene_dict[ensg]['Signal Peptide'].append(row.get("Signal peptide", None))
                                             self.gene_dict[ensg]['refSeq Number'].append(self.refSeqDict.get(self.isoformDict.get(row['Entry'])))
-                                            self.gene_dict[ensg]['Key Words'].append(self.key_words.get(row['Entry']))
+                                            
+
+                                            self.gene_dict[ensg]['Key Words'].append(self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present"))
+                                            self.gene_dict[ensg]['PPI'].append(self.key_words.get(row['Entry'], {}).get("PPI", "Not Present"))
+                                            self.gene_dict[ensg]['Main ID'].append(self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present"))
                                             symbol_count += 1 
 
 
@@ -386,9 +407,12 @@ class UniProtProcessor:
                         self.merged_df.at[index, 'Num Transmembrane Regions'] = [information["Transmembrane"].values[0]]
                         self.merged_df.at[index, 'Signal Peptide'] = [information["Signal peptide"].values[0]]
                         self.merged_df.at[index, 'refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(uniprot_id))]
-                        self.merged_df.at[index, 'Key Words'] = [self.key_words.get(uniprot_id)]
-                        
 
+
+
+                        self.merged_df.at[index, 'Key Words'] = [self.key_words.get(uniprot_id, {}).get("Key Words", "Not Present")]
+                        self.merged_df.at[index, 'PPI'] = [self.key_words.get(uniprot_id, {}).get("PPI", "Not Present")]
+                        self.merged_df.at[index, 'Main ID'] = [self.key_words.get(uniprot_id, {}).get("Main ID", "Not Present")]                              
 
                         self.added += 1
                         print(f"{row['gene_id']}: {uniprot_id}")
