@@ -12,8 +12,9 @@ class fileDownloader:
         self.gencode_fasta = "gencode.pc_translations.fa.gz"
         self.uniprot_fasta = 'uniprot.fa'
 
-        self.atlas_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping/query_guest_20250416-123645-854.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_guest_20250416-123645-854&rs_page_size=1000000&output_mode=tsv"
-        self.backup_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins/query_guest_20250416-172516-679.tsv?apply_action=VIEWRESULTSET&rs_set_name=query_guest_20250416-172516-679&rs_page_size=1000000&output_mode=tsv"
+
+        self.atlas_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetCoreProteomeMapping?mapping_id=116&atlas_build_id=592&redundancy_constraint=on&QUERY_NAME=AT_GetCoreProteomeMapping&action=QUERY&uploaded_file_not_saved=1&apply_action=QUERY&output_mode=tsv"
+        self.backup_url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins?row_limit=5000000&atlas_build_id=592&organism_id=2&gene_annotation_level_constraint=leaf&QUERY_NAME=AT_GetProteins&action=QUERY&uploaded_file_not_saved=1&apply_action=QUERY&output_mode=tsv"
 
 
         self.atlas_file = "peptideAtlas.tsv"
@@ -23,6 +24,8 @@ class fileDownloader:
 
         self.uniprot_tsv = "uniprot.tsv.gz"
         self.isoformFile = "Uniprot.dat"
+        self.additional_datFile = "additional_datFile.dat"
+
 
     def download_GencodeGenes(self):
         print("Looking for GTF file")
@@ -170,7 +173,7 @@ class fileDownloader:
             while attempt < max_attempt:
             
                 try:
-                    response = requests.get(url, stream=True, timeout=10)
+                    response = requests.get(url, stream=True, timeout=20)
                     with open(output_zip_file, 'wb') as f:
                         f.write(response.content)
                     print("Downloaded", output_zip_file)
@@ -222,7 +225,6 @@ class fileDownloader:
         #Checks for and downloads UniProtKB .dat file
         print("Looking for uniprot dat file")
         gz_filename = self.isoformFile + ".gz"
-        
 
         if os.path.exists(self.isoformFile):
             print("DAT File Found")
@@ -256,6 +258,36 @@ class fileDownloader:
                 with open(self.isoformFile, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             print(f"Decompressed: {self.isoformFile}")
+
+        print("Looking for Additional Dat file")
+        if os.path.exists(self.additional_datFile):
+            print("Additional dat file found")
+        else:
+            url = "https://rest.uniprot.org/idmapping/uniprotkb/results/stream/4XWFgYz1Pr?format=txt"
+            print("Downloading", url)
+            attempt = 0
+            max_attempt = 3
+                                        
+            while attempt < max_attempt:
+                try:
+                    response = requests.get(url, stream=True, timeout=10)
+                    response.raise_for_status()
+                    with open(self.additional_datFile, 'wb') as f:
+                        f.write(response.content)
+                    print("Downloaded", self.additional_datFile)
+                    break
+                except requests.exceptions.Timeout:
+                    attempt += 1
+                    print(f"Request timed out, trying again: {attempt}/{max_attempt}")
+                except requests.exceptions.RequestException as e:
+                    print("Error", e)
+                    break
+            if attempt == max_attempt:
+                    print("Attempt to download file timed out too many times. File not downloaded")
+                    sys.exit("Exiting Program")
+
+
+
 
     def run(self):
         self.download_GencodeFASTA()
