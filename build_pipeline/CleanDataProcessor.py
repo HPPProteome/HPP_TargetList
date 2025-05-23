@@ -8,7 +8,7 @@ class CleanDataProcessor:
     def __init__(self, output_file="cleaned_data.xlsx"):
         self.entries_file = "uniprot_output.xlsx"
         self.gene_data = pd.read_excel("uniprot_output.xlsx")
-        self.columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'evidence', 'found_with', 'isoform', 'EC Number', 'Num Transmembrane Regions', 'refSeq Number', 'ENSP', 'ENST', 'Signal Peptide']
+        self.columns = ['uniprot_id', 'entry_name', 'gene_symbol', 'description', 'protein length', 'entry_type', 'evidence', 'found_with', 'isoform', 'EC Number', 'Num Transmembrane Regions', 'refSeq Number', 'ENSP', 'ENST', 'Signal Peptide', 'PPI', 'Main ID']
 
         self.strange_genes = []
 
@@ -32,7 +32,7 @@ class CleanDataProcessor:
         self.gene_data["Key Words"] = self.gene_data["Key Words"].apply(self.stringListToList)
 
 
-    def falseOverTrue(self):
+    def falseOverTrue(self): #Currently Not used (Artifact code that may be used later)
         #Optimizes for using gene_id over gene_symbol. Catches any True gene_symbols and False gene_id enteries to store in diff file.
         #Will keep False gene_id over True gene_symbol entry.
 
@@ -114,6 +114,9 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
                 self.gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
                 self.gene_data.at[index, 'Key Words'] = [row['Key Words'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+                self.gene_data.at[index, 'PPI'] = [row['PPI'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+                self.gene_data.at[index, 'Main ID'] = [row['Main ID'][i] for i in range(len(entry_types_bool)) if entry_types_bool[i]]
+
         #Makes sure that only the lowest  level of exsistance proteins are kept [1,1,4] --> [1,1]
         for index, row in self.gene_data.iterrows():
             if len(row['evidence']) > 1:
@@ -140,8 +143,8 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'Signal Peptide'] = [row['Signal Peptide'][i].strip() for i in range(len(keeper)) if keeper[i]]
                 self.gene_data.at[index, 'refSeq Number'] = [row['refSeq Number'][i] for i in range(len(keeper)) if keeper[i]]
                 self.gene_data.at[index, 'Key Words'] = [row['Key Words'][i] for i in range(len(keeper)) if keeper[i]]
-
-
+                self.gene_data.at[index, 'PPI'] = [row['PPI'][i] for i in range(len(keeper)) if keeper[i]]
+                self.gene_data.at[index, 'Main ID'] = [row['Main ID'][i] for i in range(len(keeper)) if keeper[i]]
 
         #Uses the entry with the connocial ENSP and ENST numbers (if availible), by taking the only avaible ENSP number
         for index, row in self.gene_data.iterrows():
@@ -168,8 +171,8 @@ class CleanDataProcessor:
                         self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
                         self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
                         self.gene_data.at[index, 'Key Words'] = row['Key Words'][i]
-        
-
+                        self.gene_data.at[index, 'PPI'] = row['PPI'][i]
+                        self.gene_data.at[index, 'Main ID'] = row['Main ID'][i]
 
 
 
@@ -198,6 +201,9 @@ class CleanDataProcessor:
                             self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
                             self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
                             self.gene_data.at[index, 'Key Words'] = row['Key Words'][0]
+                            self.gene_data.at[index, 'PPI'] = row['PPI'][0]
+                            self.gene_data.at[index, 'Main ID'] = row['Main ID'][0]
+
         print("Number of repeats:", repeats)
 
         #Chooses highest CDS length when muiltiple entries could be a possible match
@@ -226,6 +232,8 @@ class CleanDataProcessor:
                 self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][i]
                 self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][i]
                 self.gene_data.at[index, 'Key Words'] = row['Key Words'][i]
+                self.gene_data.at[index, 'PPI'] = row['PPI'][i]
+                self.gene_data.at[index, 'Main ID'] = row['Main ID'][i]
 
         
         #Cleans data so that is no longer a list
@@ -246,6 +254,10 @@ class CleanDataProcessor:
                             self.gene_data.at[index, 'Signal Peptide'] = row['Signal Peptide'][0]
                             self.gene_data.at[index, 'refSeq Number'] = row['refSeq Number'][0]
                             #self.gene_data.at[index, 'Key Words'] = row['Key Words'][0]
+
+                            self.gene_data.at[index, 'PPI'] = row['PPI'][0]
+                            self.gene_data.at[index, 'Main ID'] = row['Main ID'][0]
+
                             if row['isoform'][0] != None and not row['isoform'][0].startswith("ENSG"):
                                 self.gene_data.at[index, 'isoform'] = row['isoform'][0].strip()
                             else:
@@ -253,6 +265,7 @@ class CleanDataProcessor:
 
 
                             if row['Key Words'] and None not in row['Key Words']:
+                                
                                 if isinstance(row['Key Words'][0], list):
                                     self.gene_data.at[index, 'Key Words'] = ", ".join(row['Key Words'][0]).replace(";", ", ")
                                 else:
@@ -268,14 +281,14 @@ class CleanDataProcessor:
 
         print("Making Frame: cleaned_table.xlsx and False_ensg_over_name.xlsx")
         self.gene_data.to_excel("cleaned_table.xlsx", index=False)
-        self.strange_genes.to_excel("False_ensg_over_name.xlsx", index=False)
+        #self.strange_genes.to_excel("False_ensg_over_name.xlsx", index=False)
         print("done")
 
 
 
     def run(self):
         self.dataModifier()
-        self.falseOverTrue()
+        #self.falseOverTrue()
         self.cleanData()
         self.makeTable()
 

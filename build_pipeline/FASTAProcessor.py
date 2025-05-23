@@ -94,11 +94,11 @@ class FASTAProcessor():
         self.columns_to_export = [
             'gene_id', 'gene_name', 'chrom', 'start', 'end', 'transl_type',
             'CDS', 'ENSP', 'ENST',
-            'uniprot_id', 'entry_type', 'Reviewed Entry Available', 'entry_name', 'gene_symbol', 'description',
+            'uniprot_id', 'entry_type', 'entry_name', 'gene_symbol', 'description',
             'protein length', 'evidence', 'Suggested PE', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 
             'found_with', 'isoform', 'refSeq Number', 'Difference in lengths',
             'EC Number', 'Num Transmembrane Regions', 'Signal Peptide', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'Hydrophobicity', 
-            'PI', 'Mass Spec ID', '3D-Structure', 'Disease Varient']
+            'PI', 'Mass Spec ID', '3D-Structure', 'Disease Varient', 'PPI']
 
 
 
@@ -253,7 +253,7 @@ class FASTAProcessor():
 
 
         #Gets ENSP numbers for longest Sequence in Gencode if no UniProtID
-            elif row['uniprot_id'] is None or pd.isna(row['uniprot_id']):
+            elif (row['uniprot_id'] is None or pd.isna(row['uniprot_id'])):
                         posSeq = self.ensg_dict.get(row['gene_id'], {}).get('sequences', [])
                         max_len = {"len":0, "index":0}
                         for i in posSeq:
@@ -390,17 +390,30 @@ class FASTAProcessor():
         self.gene_file['3D-Structure'] = ''
         self.gene_file['Disease Varient'] = ''
 
+
         for index, row in self.gene_file.iterrows():
+    
             words = row['Key Words']
-            if "3D-structure" in words:
-                self.gene_file.at[index, "3D-Structure"] = "Yes"
+            if 'Not Present' not in words and not pd.isna(row['PPI']):
+                if "3D-structure" in words:
+                    self.gene_file.at[index, "3D-Structure"] = "Yes"
+                else:
+                    self.gene_file.at[index, "3D-Structure"] = "No"   
+            
+                if "Proteomicsidentification" in words:
+                    self.gene_file.at[index, "Mass Spec ID"] = "Yes"
+                else:
+                    self.gene_file.at[index, "Mass Spec ID"] = "No" 
 
-            if "Proteomicsidentification" in words:
-                self.gene_file.at[index, "Mass Spec ID"] = "Yes"
-
-            if "Diseasevariant" in words:
-                self.gene_file.at[index, "Disease Varient"] = "Yes" 
-
+                if "Diseasevariant" in words:
+                    self.gene_file.at[index, "Disease Varient"] = "Yes"
+                else:
+                    self.gene_file.at[index, "Disease Varient"] = "No" 
+            
+            if 'Not Present' not in words and not pd.isna(row['PPI']):
+                 self.gene_file.at[index, "PPI"] = int(row['PPI'])
+            else:
+                 self.gene_file.at[index, "PPI"] = pd.NA
 
 
     def tableMaker(self):
@@ -408,14 +421,21 @@ class FASTAProcessor():
         self.searchTags()
         gene_file_selected = self.gene_file[self.columns_to_export]
 
-        gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Cannonical Isoform","entry_type":"Reviewed"}) 
+        gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Cannonical Isoform","entry_type":"Reviewed", "protein length":"Protein Length", "Difference in lengths":"Difference in Lengths"}) 
 
-        gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(bool)
+        gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(pd.BooleanDtype())
 
         gene_file_selected['Num Transmembrane Regions'] = pd.to_numeric(gene_file_selected['Num Transmembrane Regions'], errors='coerce')
-        gene_file_selected['Num Transmembrane Regions'] = gene_file_selected['Num Transmembrane Regions'].fillna(0).astype(int).replace(0, pd.NA)
-        gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].replace("['None']", pd.NA) 
+        gene_file_selected['PPI'] = pd.to_numeric(gene_file_selected['PPI'], errors='coerce').astype('Int64')
 
+        gene_file_selected['Num Transmembrane Regions'] = gene_file_selected['Num Transmembrane Regions'].fillna(0).astype(int).replace(0, pd.NA)
+        gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].replace("['None']", pd.NA)
+        gene_file_selected['refSeq Number'] = gene_file_selected['refSeq Number'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "None" else x)
+        gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "None" else x)
+        gene_file_selected['EC Number'] = gene_file_selected['EC Number'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "nan" else x) 
+        gene_file_selected['Difference in Lengths'] = gene_file_selected['Difference in Lengths'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "N/A" else x)
+        
+        gene_file_selected = gene_file_selected.applymap(lambda x: x.strip() if isinstance(x, str)  else x)
         #Creates Exception files
 
         #No uniprot entries
