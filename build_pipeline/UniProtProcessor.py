@@ -291,27 +291,29 @@ class UniProtProcessor:
                         print("exceptions_dict used")
                         genes = self.exceptions_dict[row['Entry']]
                         for gene in genes:
-                            self.gene_dict[gene]['reviewed'] = [row['Reviewed']]
-                            self.gene_dict[gene]['entry_name'] = [row['Entry Name']]
-                            self.gene_dict[gene]['uniprot_id'] = [row['Entry']]
-                            self.gene_dict[gene]['description'] = [row['Protein names']]
-                            self.gene_dict[gene]['protein length'] = [row['Length']]
-                            self.gene_dict[gene]['gene_symbol'] = [row['Gene Names']]
-                            self.gene_dict[gene]['found_with'] = ["Hand Selected"]
-                            self.gene_dict[gene]['evidence'] = [row['Protein existence']]
-                            self.gene_dict[gene]['entry_type'] = [row['Reviewed']]
-                            self.gene_dict[gene]['ENSP'] = [None]
-                            self.gene_dict[gene]['ENST'] = [None] 
-                            self.gene_dict[gene]['isoform'] = [self.isoformDict.get(row['Entry'])]
-                            self.gene_dict[gene]['EC Number'] = [row.get("EC number", None)]
-                            self.gene_dict[gene]['Num Transmembrane Regions'] = [row.get("Transmembrane", "None")]
-                            self.gene_dict[gene]['Signal Peptide'] = [row.get("Signal peptide", "None")]
-                            self.gene_dict[gene]['refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(row['Entry']))]
+                            if gene in self.gene_dict:
+                                self.gene_dict[gene]['reviewed'] = [row['Reviewed']]
+                                self.gene_dict[gene]['entry_name'] = [row['Entry Name']]
+                                self.gene_dict[gene]['uniprot_id'] = [row['Entry']]
+                                self.gene_dict[gene]['description'] = [row['Protein names']]
+                                self.gene_dict[gene]['protein length'] = [row['Length']]
+                                self.gene_dict[gene]['gene_symbol'] = [row['Gene Names']]
+                                self.gene_dict[gene]['found_with'] = ["Hand Selected"]
+                                self.gene_dict[gene]['evidence'] = [row['Protein existence']]
+                                self.gene_dict[gene]['entry_type'] = [row['Reviewed']]
+                                self.gene_dict[gene]['ENSP'] = [None]
+                                self.gene_dict[gene]['ENST'] = [None] 
+                                self.gene_dict[gene]['isoform'] = [self.isoformDict.get(row['Entry'])]
+                                self.gene_dict[gene]['EC Number'] = [row.get("EC number", None)]
+                                self.gene_dict[gene]['Num Transmembrane Regions'] = [row.get("Transmembrane", "None")]
+                                self.gene_dict[gene]['Signal Peptide'] = [row.get("Signal peptide", "None")]
+                                self.gene_dict[gene]['refSeq Number'] = [self.refSeqDict.get(self.isoformDict.get(row['Entry']))]
  
-                            self.gene_dict[gene]['Key Words'] = [self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present")]
-                            self.gene_dict[gene]['PPI'] = [self.key_words.get(row['Entry'], {}).get("PPI", "Not Present")]
-                            self.gene_dict[gene]['Main ID'] = [self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present")]
-
+                                self.gene_dict[gene]['Key Words'] = [self.key_words.get(row['Entry'], {}).get("Key Words", "Not Present")]
+                                self.gene_dict[gene]['PPI'] = [self.key_words.get(row['Entry'], {}).get("PPI", "Not Present")]
+                                self.gene_dict[gene]['Main ID'] = [self.key_words.get(row['Entry'], {}).get("Main ID", "Not Present")]
+                            else:
+                                print(f"There is no need for an exception for {gene}. It is not in the release")
         print("Making connections with gene symbols")
         gene_symbols_dict = {}
         for i in self.gene_dict:
