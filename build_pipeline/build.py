@@ -14,7 +14,7 @@ from PurgeProcessor import fileRemover
 def main():
     parser = argparse.ArgumentParser(description="Combines data from GENCODE, UniProtKB, PeptideAtlas and ProteinAtlas to build Supplementry table 1")
 
-    parser.add_argument("--version", default=47, type=int, help="GENCODE version to download and process (default: 47)")
+    parser.add_argument("--version", default=48, type=int, help="GENCODE version to download and process (default: 48)")
     #parser.add_argument("--UniProtversion", default=0, type=int, help="UniProtKB version to download and process (default: Most Recent)")
 
     parser.add_argument("--build", action="store_true", default=False, help="Runs code to build FASTA file and Supplementary Table 1")
