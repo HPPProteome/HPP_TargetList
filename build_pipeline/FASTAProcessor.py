@@ -424,6 +424,7 @@ class FASTAProcessor():
         gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Cannonical Isoform","entry_type":"Reviewed", "protein length":"Protein Length", "Difference in lengths":"Difference in Lengths"}) 
 
         gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(pd.BooleanDtype())
+        gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].map({True: 'Reviewed', False: 'Unreviewed'})
 
         gene_file_selected['Num Transmembrane Regions'] = pd.to_numeric(gene_file_selected['Num Transmembrane Regions'], errors='coerce')
         gene_file_selected['PPI'] = pd.to_numeric(gene_file_selected['PPI'], errors='coerce').astype('Int64')
