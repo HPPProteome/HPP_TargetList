@@ -30,53 +30,51 @@ class FASTAProcessor():
         self.secound_sheet = {"Gene ID": "ENSG number, from GENCODE GTF.",
             "Gene Symbol": "Gene Symbol, from GENCODE GTF.",
             "Chromosome": "Chromosome location, from GENCODE GTF.",
-            "Start": "Nucleotide the gene starts on, from GENCODE FASTA.",
-            "End": "Nucleotide the gene ends on, from GENCODE FASTA.",
+            "Start": "Nucleotide the gene starts on, from GENCODE GTF.",
+            "End": "Nucleotide the gene ends on, from GENCODE GTF.",
             "Translation Type": (
                 "Represents how a transcript was chosen for a single gene, from GENCODE GTF. "
                 "Main Select - Indicates transcript is the single agreed-upon transcript for the protein-coding gene. "
                 "Canonical - Indicates it was the 'best' transcript, selected by an individual annotation source."
             ),
             "CDS Length": "Length of gene’s amino acid sequence, from GENCODE FASTA.",
-            "ENSP & ENST": "Identifiers taken from UniProtKB. If unavailable, they are taken from GENCODE FASTA.",
+            "Protein ID & Transcirpt ID": "Identifiers taken from UniProtKB. If unavailable, they are taken from GENCODE FASTA.",
             "UniProtKB ID": "Protein Coding Gene UniProtKB ID, taken from UniProtKB.",
             "Reviewed": "Status of entry taken from UniProtKB that matches the gene’s assigned UniProtKB ID.",
-            "Reviewed Entry Available": (
-                "Indicates that even if a UniProtKB entry with an unreviewed ENSG link was chosen, "
-                "a reviewed UniProtKB entry with a gene symbol link is available in False_ensg_over_name.xlsx."
-            ),
-            "Entry Name": "Gene entry name, from UniProtKB tsv.",
-            "Uniprot Symbol": "UniProtKB ID, from UniProtKB tsv.",
+            "UniProtKB Name": "Gene entry name, from UniProtKB tsv.",
+            "UniProtKB Symbol": "UniProtKB ID, from UniProtKB tsv.",
             "Description": "Description of UniProtKB entry, from UniProtKB tsv.",
             "Protein Length": "Length of amino acid sequence, from UniProtKB tsv.",
             "PE": (
                 "Level of protein existence (1: Evidence at protein level, 2: Evidence at transcript level, "
                 "3: Inferred from homology, 4: Protein predicted, and 5: Protein Uncertain), from UniProtKB."
             ),
-            "Suggested PE": (
-                "Using information from NextProt, if any tissue for a protein coding gene has a score over 1.0, "
-                "it suggests a change to 2 if PE score is >2."
-            ),
-            "Highest nTPM Score": "Provides the highest nTPM score for a gene, from NextProt.",
+            "HPA Highest nTPM": "Provides the highest nTPM score for a gene, from Human Peptide Atlas.",
             "Tissues with nTPM Score Above 1": (
                 "Counts the number of tissues with a nTPM score above 1.0. Out of 50 tissues, from NextProt."
             ),
             "Link Made Through": (
-                "Indicates whether the UniProtKB entry was linked to the GENCODE entry through the ENG number (gene_id) or its symbol (gene_symbol)."
+                "Indicates whether the UniProtKB entry was linked to the GENCODE entry through the ENSG number (gene_id), its gene symbol (gene_symbol), hand selected (Hand Selected), or matched through its GENCODE and UniProtKB sequence (Sequence)."
             ),
-            "Isoform": "Notes the specific isoform linked to the ENSG number if present, from UniProtKB tsv.",
+            "Canonical Isoform": "Notes the specific isoform sequence that is displayed for the UniProtKB ID, from UniProtKB dat file.",
+            "RefSeq Identifier": "RefSeq Identifier (if availible), from UniProtKB dat file",
             "Difference in Lengths": (
                 "Finds the difference in length between the UniProtKB and GENCODE entries’ amino acid sequence."
             ),
+
             "EC Number": "EC number of the gene, from UniProtKB tsv.",
-            "Num Transmembrane Regions": "Number of transmembrane regions, from UniProtKB tsv.",
+            "nTMR": "Number of transmembrane regions, from UniProtKB tsv.",
             "Signal Peptide": "Length of a signal peptide if present, from UniProtKB tsv.",
-            "PeptideAtlas Category": "Category of the gene, from PeptideAtlas.",
-            "Observed": "Number of observed peptides, from PeptideAtlas.",
-            "Distinct": "Number of distinct peptides, from PeptideAtlas.",
-            "Uniquely Mapping": "Number of uniquely mapping peptides, from PeptideAtlas.",
+            "PeptideAtlas Category": "Category of the protein, from PeptideAtlas.",
+            "PA nObs": "Number of observed peptides, from PeptideAtlas.",
+            "PA Distinct Pep": "Number of distinct peptides, from PeptideAtlas.",
+            "PA Uniquely Mapping": "Number of uniquely mapping peptides, from PeptideAtlas.",
             "Hydrophobicity": "Hydrophobicity of amino acid sequence for given gene, calculated with BioPython’s ProteinAnalysis.",
-            "PI": "PI number of amino acid sequence for given gene, calculated with BioPython’s ProteinAnalysis."
+            "pI": "pI number of amino acid sequence for given gene, calculated with BioPython’s ProteinAnalysis.",
+            "Mass Spec ID": "Indicates whether or not the UniProtKB ID has mass spectrometry experiments associated with it, from UniProtKB dat file.",
+            "3D Structure": "Indictaes whether or not information about the UniProtKB ID's 3D Structure is availible, from UniProtKB dat file.",
+            "Disease Variant": "Indictaes whether or not information about the UniProtKB ID corresponding protein has one or more documented variations in its sequence that are linked to a specific disease or phenotype, from UniProtKB dat file.",
+            "PPI": "Number of recorded protein on protein interactions for associated UniProtKB ID, from UniProtKB dat file."
             }
 
         self.secound_sheet_df = pd.DataFrame(list(self.secound_sheet.items()), columns=["Column", "Description"])
@@ -95,7 +93,7 @@ class FASTAProcessor():
             'gene_id', 'gene_name', 'chrom', 'start', 'end', 'transl_type',
             'CDS', 'ENSP', 'ENST',
             'uniprot_id', 'entry_type', 'entry_name', 'gene_symbol', 'description',
-            'protein length', 'evidence', 'Suggested PE', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 
+            'protein length', 'evidence', 'Highest nTPM Score','Tissues with nTPM Score Above 1 (/50)', 
             'found_with', 'isoform', 'refSeq Number', 'Difference in lengths',
             'EC Number', 'Num Transmembrane Regions', 'Signal Peptide', 'PeptideAtlas Category', 'Observed', 'Distinct', 'Uniquely Mapping', 'Hydrophobicity', 
             'PI', 'Mass Spec ID', '3D-Structure', 'Disease Varient', 'PPI']
@@ -340,7 +338,7 @@ class FASTAProcessor():
 
         #Calculates Hydrophobicity and pI
 
-            sequence = ''.join([aa for aa in self.gene_file.at[index, 'Sequence'] if aa in "ACDEFGHIKLMNPQRSTVWY"]) #Removes U (selenocysteine)
+            sequence = ''.join([aa if aa in "ACDEFGHIKLMNPQRSTVWY" else 'L' for aa in self.gene_file.at[index, 'Sequence']]) #Removes U (selenocysteine) and other non standard char
             analysis = ProteinAnalysis(sequence)
             self.gene_file.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
             self.gene_file.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
@@ -421,17 +419,20 @@ class FASTAProcessor():
         self.searchTags()
         gene_file_selected = self.gene_file[self.columns_to_export]
 
-        gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"Uniprot Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"Entry Name", "chrom":"Chromosome", "description":"Description", "isoform":"Cannonical Isoform","entry_type":"Reviewed", "protein length":"Protein Length", "Difference in lengths":"Difference in Lengths"}) 
+        gene_file_selected = gene_file_selected.rename(columns={"gene_name":"Gene Symbol", "gene_id":"Gene ID", "transl_type": "Translation Type", "gene_symbol":"UniProtKB Symbol", "uniprot_id":"UniProtKB ID", "evidence":"PE", "CDS":"CDS Length", "found_with":"Link Made Through", "entry_name":"UniProtKB Name", "chrom":"Chromosome", "description":"Description", "isoform":"Canonical Isoform","entry_type":"Reviewed", "protein length":"Protein Length", "Difference in lengths":"Difference in Lengths",
+                                                                "start":"Start", "end":"End", "ENSP":"Protein ID", "ENST":"Transcript ID", "Highest nTPM Score":"HPA Highest nTPM", "Link Made Through":"ID Link", "refSeq Number":"RefSeq Identifier",
+                                                                "Num Transmembrane Regions":"nTMR", "Observed":"PA nObs", "Distinct":"PA Distinct Pep", "Uniquely Mapping":"PA Uniquely Mapping",
+                                                                "PI":"pI", "3D-Structure":"3D Structure", "Disease Varient":"Disease Variant"}) 
 
         gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(pd.BooleanDtype())
         gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].map({True: 'Reviewed', False: 'Unreviewed'})
 
-        gene_file_selected['Num Transmembrane Regions'] = pd.to_numeric(gene_file_selected['Num Transmembrane Regions'], errors='coerce')
+        gene_file_selected['nTMR'] = pd.to_numeric(gene_file_selected['nTMR'], errors='coerce')
         gene_file_selected['PPI'] = pd.to_numeric(gene_file_selected['PPI'], errors='coerce').astype('Int64')
 
-        gene_file_selected['Num Transmembrane Regions'] = gene_file_selected['Num Transmembrane Regions'].fillna(0).astype(int).replace(0, pd.NA)
+        gene_file_selected['nTMR'] = gene_file_selected['nTMR'].fillna(0).astype(int).replace(0, pd.NA)
         gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].replace("['None']", pd.NA)
-        gene_file_selected['refSeq Number'] = gene_file_selected['refSeq Number'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "None" else x)
+        gene_file_selected['RefSeq Identifier'] = gene_file_selected['RefSeq Identifier'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "None" else x)
         gene_file_selected['Signal Peptide'] = gene_file_selected['Signal Peptide'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "None" else x)
         gene_file_selected['EC Number'] = gene_file_selected['EC Number'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "nan" else x) 
         gene_file_selected['Difference in Lengths'] = gene_file_selected['Difference in Lengths'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "N/A" else x)
