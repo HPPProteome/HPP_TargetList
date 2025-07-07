@@ -14,7 +14,7 @@ class UniProtProcessor:
         self.uniprot_file = "uniprot.tsv.gz"
         self.gene_file = "protien_coding_genes.xlsx"
         self.isoformFile = "Uniprot.dat"
-        self.additional_isoformFile = "additional_datFile.dat"
+        self.additional_isoformFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "additional_datFile.dat")
         
         self.output_file = "uniprot_output.xlsx"
         
@@ -33,8 +33,9 @@ class UniProtProcessor:
         self.gencode_seq = {} #Stored ensgNum{sequence:ENSP}
         self.uniprot_seq = {} #Stores sequence:ID
 
-        self.exceptions_file = "Manual_ENSG_UP_associations.tsv"
-        self.exceptions_df = pd.read_csv('Manual_ENSG_UP_associations.tsv', sep='\t')
+        self.exceptions_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Manual_ENSG_UP_associations.tsv")
+        
+        self.exceptions_df = pd.read_csv(self.exceptions_file, sep='\t')
         self.exceptions_dict = {}
 
     def level_converter(self, description):

@@ -24,7 +24,7 @@ class fileDownloader:
 
         self.uniprot_tsv = "uniprot.tsv.gz"
         self.isoformFile = "Uniprot.dat"
-        self.additional_datFile = "additional_datFile.dat"
+        
 
 
     def download_GencodeGenes(self):
@@ -258,33 +258,6 @@ class fileDownloader:
                 with open(self.isoformFile, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
             print(f"Decompressed: {self.isoformFile}")
-
-        print("Looking for Additional Dat file")
-        if os.path.exists(self.additional_datFile):
-            print("Additional dat file found")
-        else:
-            url = "https://rest.uniprot.org/idmapping/uniprotkb/results/stream/4XWFgYz1Pr?format=txt"
-            print("Downloading", url)
-            attempt = 0
-            max_attempt = 3
-                                        
-            while attempt < max_attempt:
-                try:
-                    response = requests.get(url, stream=True, timeout=10)
-                    response.raise_for_status()
-                    with open(self.additional_datFile, 'wb') as f:
-                        f.write(response.content)
-                    print("Downloaded", self.additional_datFile)
-                    break
-                except requests.exceptions.Timeout:
-                    attempt += 1
-                    print(f"Request timed out, trying again: {attempt}/{max_attempt}")
-                except requests.exceptions.RequestException as e:
-                    print("Error", e)
-                    break
-            if attempt == max_attempt:
-                    print("Attempt to download file timed out too many times. File not downloaded")
-                    sys.exit("Exiting Program")
 
 
 

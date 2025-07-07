@@ -1,6 +1,8 @@
 import argparse
 import os
+import sys
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../lib")
 from DownloadProcessor import fileDownloader
 from GENCODEProcessor import GENCODEProcessor
 from UniProtProcessor import UniProtProcessor
@@ -9,18 +11,21 @@ from ProteinAtlasProcessor import ProteinAtlasProcessor
 from PeptideAtlasProcessor import PeptideAtlasProcessor
 from FASTAProcessor import FASTAProcessor
 from PurgeProcessor import fileRemover
+from underrepresentedproteingroups_plot import UnderrepresentedProteinGroupsChart
+from msdetectioncategorization_tableplot import msDetectionCategorization
+from targetlistplots_multipanelversion import TargetListPlots
 
 
 def main():
     parser = argparse.ArgumentParser(description="Combines data from GENCODE, UniProtKB, PeptideAtlas and ProteinAtlas to build Supplementry table 1")
 
     parser.add_argument("--version", default=48, type=int, help="GENCODE version to download and process (default: 48)")
-    #parser.add_argument("--UniProtversion", default=0, type=int, help="UniProtKB version to download and process (default: Most Recent)")
-
     parser.add_argument("--build", action="store_true", default=False, help="Runs code to build FASTA file and Supplementary Table 1")
     parser.add_argument("--purge_downloads", action="store_true", default=False, help="Removes all downloaded files used to build Supplementary Table 1/FASTA file")
-    parser.add_argument("--purge_output_files", action="store_true", default=False, help="Removes all files outputed by the code used to build Supplementary Table 1/FASTA file")
-    parser.add_argument("--purge_all", action="store_true", default=False, help="Removes all downloaded/output files from code")
+    parser.add_argument("--purge_output_files", action="store_true", default=False, help="Removes all interim files created by the code used to build Supplementary Table 1/FASTA file")
+    parser.add_argument("--purge_all", action="store_true", default=False, help="Removes all downloaded/output files from folder")
+    parser.add_argument("--build_charts", action="store_true", default=False, help="Builds extra charts about the data from generated Supplementary Table 1")
+
 
     
     args = parser.parse_args()
@@ -62,7 +67,20 @@ def main():
             print("\n ______RUNNING FASTA PROCESSOR______ \n")
             fasta_processor = FASTAProcessor(version=args.version)
             fasta_processor.run()
+    
+    if args.build_charts:
+        Underrep = UnderrepresentedProteinGroupsChart()
+        msDetect = msDetectionCategorization()
+        targetList = TargetListPlots()
 
+        print("\n ______BUILDING UNDERREPRESENTED-PROTEIN-GROUPS CHART______ \n")
+        Underrep.run()
+
+        print("\n ______BUILDING ms DETECTION CLASSIFICATION CHART______ \n")
+        msDetect.run()
+
+        print("\n ______BUILDING 6 PANEL HISTOGRAM FIGURE______ \n")
+        targetList.run()
    
     if args.purge_downloads:
         file_remover_processor = fileRemover()

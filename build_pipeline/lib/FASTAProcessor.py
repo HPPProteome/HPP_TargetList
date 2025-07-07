@@ -53,8 +53,8 @@ class FASTAProcessor():
             "Tissues with nTPM Score Above 1": (
                 "Counts the number of tissues with a nTPM score above 1.0. Out of 50 tissues, from NextProt."
             ),
-            "Link Made Through": (
-                "Indicates whether the UniProtKB entry was linked to the GENCODE entry through the ENSG number (gene_id), its gene symbol (gene_symbol), hand selected (Hand Selected), or matched through its GENCODE and UniProtKB sequence (Sequence)."
+            "ID Link": (
+                "Indicates whether the UniProtKB entry was linked to the GENCODE entry through the ENSG number (Gene ID), its gene symbol (Gene Symbol), hand selected (Hand Selected), or matched through its GENCODE and UniProtKB sequence (Sequence)."
             ),
             "Canonical Isoform": "Notes the specific isoform sequence that is displayed for the UniProtKB ID, from UniProtKB dat file.",
             "RefSeq Identifier": "RefSeq Identifier (if availible), from UniProtKB dat file",
@@ -423,7 +423,8 @@ class FASTAProcessor():
                                                                 "start":"Start", "end":"End", "ENSP":"Protein ID", "ENST":"Transcript ID", "Highest nTPM Score":"HPA Highest nTPM", "Link Made Through":"ID Link", "refSeq Number":"RefSeq Identifier",
                                                                 "Num Transmembrane Regions":"nTMR", "Observed":"PA nObs", "Distinct":"PA Distinct Pep", "Uniquely Mapping":"PA Uniquely Mapping",
                                                                 "PI":"pI", "3D-Structure":"3D Structure", "Disease Varient":"Disease Variant"}) 
-
+       
+        gene_file_selected = gene_file_selected.rename(columns={"Link Made Through":"ID Link"})
         gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].astype(pd.BooleanDtype())
         gene_file_selected['Reviewed'] = gene_file_selected['Reviewed'].map({True: 'Reviewed', False: 'Unreviewed'})
 
@@ -437,7 +438,8 @@ class FASTAProcessor():
         gene_file_selected['EC Number'] = gene_file_selected['EC Number'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "nan" else x) 
         gene_file_selected['Difference in Lengths'] = gene_file_selected['Difference in Lengths'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "N/A" else x)
         
-        gene_file_selected = gene_file_selected.applymap(lambda x: x.strip() if isinstance(x, str)  else x)
+        gene_file_selected['ID Link'] = (gene_file_selected['ID Link'].astype(str).str.strip().replace({"gene_id": "Gene ID", "gene_name": "Gene Symbol", "nan":""}))
+        gene_file_selected = gene_file_selected.map(lambda x: x.strip() if isinstance(x, str)  else x)
         #Creates Exception files
 
         #No uniprot entries
