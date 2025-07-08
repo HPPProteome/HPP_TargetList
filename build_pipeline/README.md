@@ -41,4 +41,13 @@ This script accepts the following command-line arguments:
 --build_charts       Builds extra charts about the data from the generated Supplementary Table 1
 ```
 
+## Notes
 
+- UniProtKB files downloaded will always be from the most recent release
+- FASTA file format:
+>Uniprot ID ENSG|ENSP|sequence length|Description|UniProt ID|Entry Name|Gene Symbol
+    Sequence
+
+If the UniProt ID is unavailable or has already been used by a different ENSG number, the ENSP number is used as the header: 
+>ENSP ENSG|ENSP|sequence length|Description|UniProt ID|Entry Name|Gene Symbol
+    Sequence
