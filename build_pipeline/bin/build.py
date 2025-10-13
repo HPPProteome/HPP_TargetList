@@ -19,7 +19,7 @@ from targetlistplots_multipanelversion import TargetListPlots
 def main():
     parser = argparse.ArgumentParser(description="Combines data from GENCODE, UniProtKB, PeptideAtlas and ProteinAtlas to build Supplementry table 1")
 
-    parser.add_argument("--version", default=48, type=int, help="GENCODE version to download and process (default: 48)")
+    parser.add_argument("--version", default=49, type=int, help="GENCODE version to download and process (default: 49)")
     parser.add_argument("--build", action="store_true", default=False, help="Runs code to build FASTA file and Supplementary Table 1")
     parser.add_argument("--purge_downloads", action="store_true", default=False, help="Removes all downloaded files used to build Supplementary Table 1/FASTA file")
     parser.add_argument("--purge_output_files", action="store_true", default=False, help="Removes all interim files created by the code used to build Supplementary Table 1/FASTA file")
@@ -36,7 +36,7 @@ def main():
         file_processor = fileDownloader(version=args.version)
         file_processor.run()
 
-        if not os.path.exists("protien_coding_genes.xlsx"):
+        if not os.path.exists("protein_coding_genes.xlsx"):
             print("\n ______RUNNING GENCODE PROCESSOR______ \n")
             gencode_processor = GENCODEProcessor(version=args.version)
             gencode_processor.run()

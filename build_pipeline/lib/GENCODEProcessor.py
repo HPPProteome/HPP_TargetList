@@ -11,7 +11,7 @@ class GENCODEProcessor:
     def __init__(self, version):
         self.version = version
         self.gtf_file = "gencode.annotation.gtf.gz"
-        self.output_file = "protien_coding_genes.xlsx"
+        self.output_file = "protein_coding_genes.xlsx"
         self.unexcepted_tags = ['readthrough_transcript', 'EnsEMBL_merge_exception', 'readthrough_gene', 'exp_conf', 'RNA_Seq_supported_only']
         self.unexcepted_trans_type = ['nonsense_mediated_decay', 'protein_coding_CDS_not_defined', 'retained_intron', 'TEC']
         self.column_names = ['chrom', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
@@ -88,8 +88,8 @@ class GENCODEProcessor:
 
 
         print(f"There are {tot_gene} genes in GENCODE")
-        print(f"There are {counted_genes} genes with protien coding tag")
-        print(f"There are {len(self.coding_genes)} protien coding genes") 
+        print(f"There are {counted_genes} genes with protein coding tag")
+        print(f"There are {len(self.coding_genes)} protein coding genes") 
         print("Adding translation ids and translation types")
     
         print("Adding translation types")
