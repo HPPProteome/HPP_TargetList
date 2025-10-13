@@ -27,7 +27,7 @@ class FASTAProcessor():
         self.uniprot_dict = {}
 
         #Includes annotations for what each column mean
-        self.secound_sheet = {"Gene ID": "ENSG number, from GENCODE GTF.",
+        self.second_sheet = {"Gene ID": "ENSG number, from GENCODE GTF.",
             "Gene Symbol": "Gene Symbol, from GENCODE GTF.",
             "Chromosome": "Chromosome location, from GENCODE GTF.",
             "Start": "Nucleotide the gene starts on, from GENCODE GTF.",
@@ -77,7 +77,7 @@ class FASTAProcessor():
             "PPI": "Number of recorded protein on protein interactions for associated UniProtKB ID, from UniProtKB dat file."
             }
 
-        self.secound_sheet_df = pd.DataFrame(list(self.secound_sheet.items()), columns=["Column", "Description"])
+        self.second_sheet_df = pd.DataFrame(list(self.second_sheet.items()), columns=["Column", "Description"])
 
 
         self.noCDS = []
@@ -339,9 +339,12 @@ class FASTAProcessor():
         #Calculates Hydrophobicity and pI
 
             sequence = ''.join([aa if aa in "ACDEFGHIKLMNPQRSTVWY" else 'L' for aa in self.gene_file.at[index, 'Sequence']]) #Removes U (selenocysteine) and other non standard char
-            analysis = ProteinAnalysis(sequence)
-            self.gene_file.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
-            self.gene_file.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
+            if len(sequence) == 0:
+                print(f"WARNING: No sequence for {row['gene_id']} at index {index}")
+            else:
+                analysis = ProteinAnalysis(sequence)
+                self.gene_file.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
+                self.gene_file.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
 
 
         print("\n -----Stats----- \n")
@@ -439,7 +442,10 @@ class FASTAProcessor():
         gene_file_selected['Difference in Lengths'] = gene_file_selected['Difference in Lengths'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "N/A" else x)
         
         gene_file_selected['ID Link'] = (gene_file_selected['ID Link'].astype(str).str.strip().replace({"gene_id": "Gene ID", "gene_name": "Gene Symbol", "nan":""}))
-        gene_file_selected = gene_file_selected.map(lambda x: x.strip() if isinstance(x, str)  else x)
+
+        print("WARNING: Temporarily skipping map strip because this generates a mysterious error???")
+        #gene_file_selected = gene_file_selected.map(lambda x: x.strip() if isinstance(x, str) else x)
+
         #Creates Exception files
 
         #No uniprot entries
@@ -454,7 +460,7 @@ class FASTAProcessor():
         noCDS_df = pd.DataFrame(self.noCDS, columns=self.columns_to_export)
 
 
-        #PE5 Protiens
+        #PE5 Proteins
         PE5_df = pd.DataFrame(self.PE5, columns=self.columns_to_export)
         print("Number of PE 5 proteins:", PE5_df.shape[0])
         print("Making Frames")
@@ -464,14 +470,14 @@ class FASTAProcessor():
         output_file = "Supplemental_table_1.xlsx"
         with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
             gene_file_selected.to_excel(writer, sheet_name="Gene Table", index=False)
-            self.secound_sheet_df.to_excel(writer, sheet_name="Column Annotations", index=False)
+            self.second_sheet_df.to_excel(writer, sheet_name="Column Annotations", index=False)
 
 
 
         #Extra tables
         noCDS_df.to_excel("No_Fasta_entry.xlsx", index=False)
         duplicates.to_excel("Identical_UniProtKB_entries.xlsx",index=False)
-        PE5_df.to_excel("PE5_Protiens.xlsx", index=False)
+        PE5_df.to_excel("PE5_Proteins.xlsx", index=False)
         noUniprot_df.to_excel("No_UniprotKB_entries.xlsx", index=False)
         print("Tables made")
 
