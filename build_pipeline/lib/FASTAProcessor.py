@@ -439,7 +439,7 @@ class FASTAProcessor():
         gene_file_selected['Difference in Lengths'] = gene_file_selected['Difference in Lengths'].apply(lambda x: "" if isinstance(x, str) and x.strip() == "N/A" else x)
         
         gene_file_selected['ID Link'] = (gene_file_selected['ID Link'].astype(str).str.strip().replace({"gene_id": "Gene ID", "gene_name": "Gene Symbol", "nan":""}))
-        gene_file_selected = gene_file_selected.map(lambda x: x.strip() if isinstance(x, str)  else x)
+        #gene_file_selected = gene_file_selected.map(lambda x: x.strip() if isinstance(x, str)  else x)
         #Creates Exception files
 
         #No uniprot entries
