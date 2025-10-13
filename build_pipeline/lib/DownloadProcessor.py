@@ -18,7 +18,7 @@ class fileDownloader:
 
 
         self.atlas_file = "peptideAtlas.tsv"
-        self.backup_atlas_file = "Secoundary_peptideAtlas.tsv"
+        self.backup_atlas_file = "Secondary_peptideAtlas.tsv"
 
         self.rna_file = "rna_tissue_consensus.tsv.zip"
 
@@ -157,7 +157,7 @@ class fileDownloader:
         else:
             print("Secondary Atlas file found")
 
-    def download_ProtienAtlas(self):
+    def download_ProteinAtlas(self):
         print("Looking for RNA_expression file")
         if os.path.exists(self.rna_file):
             print("RNA expressions File Found")
@@ -266,7 +266,7 @@ class fileDownloader:
         self.download_GencodeFASTA()
         self.download_GencodeGenes()
         self.download_PeptideAtlas()
-        self.download_ProtienAtlas()
+        self.download_ProteinAtlas()
         self.download_Uniprot()
         self.download_UniprotFASTA()
         self.downloadDat()
