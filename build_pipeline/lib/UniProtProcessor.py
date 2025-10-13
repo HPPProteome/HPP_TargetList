@@ -12,7 +12,7 @@ from Bio import SeqIO
 class UniProtProcessor:
     def __init__(self):
         self.uniprot_file = "uniprot.tsv.gz"
-        self.gene_file = "protien_coding_genes.xlsx"
+        self.gene_file = "protein_coding_genes.xlsx"
         self.isoformFile = "Uniprot.dat"
         self.additional_isoformFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "additional_datFile.dat")
         
@@ -101,7 +101,7 @@ class UniProtProcessor:
         return gene_ids
         
 
-    #counts number of transmembrane parts in a protien
+    #counts number of transmembrane parts in a protein
     def transmem_counter(self, s):
         if isinstance(s, str):
             return int(s.count("TRANSMEM"))
@@ -146,7 +146,7 @@ class UniProtProcessor:
 
                         for key in key_list:
                             if key not in self.key_words:
-                                self.key_words[key] = {"Key Words": [], "PPI":0, "Main ID":""} #Creates a space to hold info about key words and number of protien protien interaction 
+                                self.key_words[key] = {"Key Words": [], "PPI":0, "Main ID":""} #Creates a space to hold info about key words and number of protein protein interaction 
                             if key not in changing_keys:
                                 changing_keys.append(key)
                         
@@ -433,7 +433,7 @@ class UniProtProcessor:
     def run(self):
          print("Parsing Files")
          self.datParser()
-         print("Matching ENSG with UniprotKB IDs through Ensamble")
+         print("Matching ENSG with UniprotKB IDs through Ensembl")
          self.uniprotParse()
          self.SequenceLink()
          self.tableBuilder()
