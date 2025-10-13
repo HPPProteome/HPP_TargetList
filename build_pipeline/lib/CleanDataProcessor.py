@@ -274,6 +274,11 @@ class CleanDataProcessor:
                                 self.gene_data.at[index, 'Key Words'] = ""    
                             self.gene_data.at[index, 'Key Words'] = str(self.gene_data.at[index, 'Key Words']).replace(";", " ,").replace("[", "").replace("]", "").replace(", ,", ",")          
 
+        # The UniProt IDs in Main ID often seem to have spaces in the strings. Remove them.
+        print("Removing extra spaces from 'Main ID'")
+        for index, row in self.gene_data.iterrows():
+            self.gene_data.at[index, 'Main ID'] = row['Main ID'].strip()
+
 
     def makeTable(self):
 
