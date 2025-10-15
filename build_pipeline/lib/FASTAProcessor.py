@@ -218,15 +218,16 @@ class FASTAProcessor():
 
     def addInformation(self):
         #Initializes colunms for the DataFrame <- Not technically neccisary
-        self.gene_file['Hydrophobicity'] = pd.NA
-        self.gene_file['PI'] = pd.NA
-        self.gene_file['Sequence'] = ''
-        self.gene_file['Difference in lengths'] = pd.NA
+        self.gene_file['Hydrophobicity'] = ''
+        self.gene_file['PI'] = ''
+        self.gene_file['Sequence']=''
+        self.gene_file['Difference in lengths'] = ''
 
-        #Set colunms to accept the correct types:
-        self.gene_file['gencode_symbol'] = self.gene_file['gencode_symbol'].astype('string')
+        #This initialization is necissary
+        self.gene_file['gencode_symbol'] = self.gene_file['gencode_symbol'].astype(str)
 
-        # Initializes counters
+
+
         sameSeq = 0
         collected = 0
         noUniProtID = 0
@@ -249,88 +250,58 @@ class FASTAProcessor():
 
 
             count += 1
-
-        # Gets 3 id numbers from gene
-            ens_p = row.get('ENSP')
-            unip_id = row.get('uniprot_id')
-            gene_id = row.get('gene_id')
-
-        # Checks to see if the id numbers are present
-            has_unip = not pd.isna(unip_id) and str(unip_id).strip() != ''
-            has_ensp = not pd.isna(ens_p) and str(ens_p).strip() != ''
-
         #Gets sequence if UniProt and Gencode Match
-            seq_gencode = None
-            if has_ensp:
-                seq_gencode = self.ensp_dict.get(str(ens_p), {}).get('sequence')
-            seq_unip = None
-
-            if has_unip:
-                seq_unip = self.uniprot_dict.get(str(unip_id))
-
-            if seq_gencode is not None and seq_unip is not None and seq_gencode == seq_unip:
-                self.gene_file.at[index, 'Sequence'] = seq_unip
-                self.gene_file.at[index, 'CDS'] = float(self.ensp_dict[str(ens_p)]["CDS_length"])
-                self.gene_file.at[index, 'gencode_symbol'] = self.ensp_dict[str(ens_p)]["gene_symbol"]
+            if self.ensp_dict.get(row['ENSP'], {}).get('sequence', "Hello") == self.uniprot_dict.get(row['uniprot_id'], "World"):
+                self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']] #purposely doesn't use .get() to throw error if seq doesn't exist
+                self.gene_file.at[index, 'CDS'] = float(self.ensp_dict[row['ENSP']]["CDS_length"])
+                self.gene_file.at[index, 'gencode_symbol'] = self.ensp_dict[row['ENSP']]["gene_symbol"]
                 sameSeq += 1
-                seq_assigned = True
-
-            else:
-                seq_assigned = False
 
 
         #Gets ENSP numbers for longest Sequence in Gencode if no UniProtID
-            if not seq_assigned and (not has_unip):
-                if pd.notna(gene_id) and str(gene_id) in self.ensg_dict:
-                    posSeq = self.ensg_dict[str(gene_id)]['sequences']
-                    if posSeq:
-                        lengths = [len(s) for s in posSeq]
-                        i = int(np.argmax(lengths))
-                        self.gene_file.at[index, 'Sequence'] = self.ensg_dict[str(gene_id)]['sequences'][i]
-                        self.gene_file.at[index, 'CDS'] = float(self.ensg_dict[str(gene_id)]["CDS_lengths"][i])
-                        self.gene_file.at[index, 'gencode_symbol'] = self.ensg_dict[str(gene_id)]['gene_symbols'][i]
-                        self.gene_file.at[index, 'ENST'] = self.ensg_dict[str(gene_id)]['ensts'][i]
-                        self.gene_file.at[index, 'ENSP'] = self.ensg_dict[str(gene_id)]['ensps'][i]
-                        self.gene_file.at[index, 'Difference in lengths'] = -int(self.ensg_dict[str(gene_id)]["CDS_lengths"][i])
+            elif (row['uniprot_id'] is None or pd.isna(row['uniprot_id'])):
+                        posSeq = self.ensg_dict.get(row['gene_id'], {}).get('sequences', [])
+                        max_len = {"len":0, "index":0}
+                        for i in posSeq:
+                                if len(i) > max_len['len']:
+                                        max_len['len'] = len(i)
+                                        max_len['index'] = posSeq.index(i)
+                        i = max_len['index']
+                        self.gene_file.at[index, 'Sequence'] = self.ensg_dict[row['gene_id']]['sequences'][i]
+                        self.gene_file.at[index, 'CDS'] = float(self.ensg_dict[row['gene_id']]["CDS_lengths"][i])
+                        self.gene_file.at[index, 'gencode_symbol'] = str(self.ensg_dict[row['gene_id']]['gene_symbols'][i])
+                        self.gene_file.at[index, 'ENST'] = self.ensg_dict[row['gene_id']]['ensts'][i]
+                        self.gene_file.at[index, 'ENSP'] = self.ensg_dict[row['gene_id']]['ensps'][i]
+                        self.gene_file.at[index, 'Difference in lengths'] = -int((self.ensg_dict[row['gene_id']]["CDS_lengths"][i]))
                         noUniProtID += 1
-                        seq_assigned = True
 
         #Takes the UniProt ENSP seq from gencode even if Sequences aren't perfect
-            elif not seq_assigned and has_ensp and str(ens_p) in self.ensp_dict:
-                if has_unip:
-                    self.gene_file.at[index, 'Sequence'] = seq_unip if seq_unip is not None else self.ensp_dict[str(ens_p)]['sequence']
-                else:
-                    self.gene_file.at[index, 'Sequence'] = self.ensp_dict[str(ens_p)]['sequence']
-                self.gene_file.at[index, 'CDS'] = float(self.ensp_dict[str(ens_p)]["CDS_length"])
-                self.gene_file.at[index, 'gencode_symbol'] = self.ensp_dict[str(ens_p)]["gene_symbol"]
-                if has_unip and seq_unip is not None:
-                    try:
-                        self.gene_file.at[index, 'Difference in lengths'] = len(seq_unip) - int(self.ensp_dict[str(ens_p)]["CDS_length"])
-                    except Exception:
-                        self.gene_file.at[index, 'Difference in lengths'] = pd.NA
-                incorrectENSP += 1
-                seq_assigned = True
+            elif row['ENSP'] in self.ensp_dict:
+                        self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']] #purposely doesn't use .get() to throw error if seq doesn't exist
+                        self.gene_file.at[index, 'CDS'] = float(self.ensp_dict[row['ENSP']]["CDS_length"])
+                        self.gene_file.at[index, 'gencode_symbol'] = str(self.ensp_dict[row['ENSP']]["gene_symbol"])
+                        self.gene_file.at[index, 'Difference in lengths'] = len(self.uniprot_dict[row['uniprot_id']]) - int(self.ensp_dict[row['ENSP']]["CDS_length"])
+                        incorrectENSP += 1
 
 
         #Gets the closest length sequence from Gencode to match to UniProte 
-            elif not seq_assigned and has_unip and pd.notna(gene_id) and str(gene_id) in self.ensg_dict:
-                posSeq = self.ensg_dict[str(gene_id)]['sequences']
+            elif self.uniprot_dict.get(row['uniprot_id']) not in self.ensg_dict.get(row['gene_id'], {}).get('sequences', []) and self.uniprot_dict.get(row['uniprot_id']) != None and self.ensg_dict.get(row['gene_id'], {}).get('sequences', []):
+                bestLenMatch = {'len':10**10, 'index':0}
+                posSeq = self.ensg_dict.get(row['gene_id'], {}).get('sequences', False)
+
                 if posSeq:
-                    for i, s in enumerate(posSeq):
-                        if s == seq_unip:
-                            self.gene_file.at[index, 'Sequence'] = seq_unip
-                            self.gene_file.at[index, 'CDS'] = float(self.ensg_dict[str(gene_id)]["CDS_lengths"][i])
-                            self.gene_file.at[index, 'gencode_symbol'] = self.ensg_dict[str(gene_id)]['gene_symbols'][i]
-                            self.gene_file.at[index, 'ENST'] = self.ensg_dict[str(gene_id)]['ensts'][i]
-                            self.gene_file.at[index, 'ENSP'] = self.ensg_dict[str(gene_id)]['ensps'][i]
-                            collected += 1
-                            seq_assigned = True
-                            break
-                if not seq_assigned:
-                    self.gene_file.at[index, 'Sequence'] = seq_unip if seq_unip is not None else ''
-                    self.gene_file.at[index, 'Difference in lengths'] = "N/A"
-                    noGencode += 1
-                    seq_assigned = True
+                    for i in posSeq:
+                        lenDif = abs(len(self.uniprot_dict[row['uniprot_id']]) - len(i))
+                        if lenDif < bestLenMatch['len']:
+                            bestLenMatch['len'], bestLenMatch['index'] = lenDif, posSeq.index(i)
+                    i = bestLenMatch['index']
+                    self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']]
+                    self.gene_file.at[index, 'CDS'] = float(self.ensg_dict[row['gene_id']]["CDS_lengths"][i])
+                    self.gene_file.at[index, 'gencode_symbol'] = str(self.ensg_dict[row['gene_id']]['gene_symbols'][i])
+                    self.gene_file.at[index, 'ENST'] = self.ensg_dict[row['gene_id']]['ensts'][i]
+                    self.gene_file.at[index, 'ENSP'] = self.ensg_dict[row['gene_id']]['ensps'][i]
+                    self.gene_file.at[index, 'Difference in lengths'] = len(self.uniprot_dict[row['uniprot_id']]) - int((self.ensg_dict[row['gene_id']]["CDS_lengths"][i]))		
+                    noMatch += 1
 
         #Tries and get a gencode ENSP number with the same sequence and same ENSG number in UniProt
             elif (row['ENSP'] is None or pd.isna(row['ENSP'])) and not (row['uniprot_id'] is None or pd.isna(row['uniprot_id'])):
@@ -340,7 +311,7 @@ class FASTAProcessor():
                         if posSeq[i] == self.uniprot_dict.get(row['uniprot_id']):
                             self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']]
                             self.gene_file.at[index, 'CDS'] = float(self.ensg_dict[row['gene_id']]["CDS_lengths"][i])
-                            self.gene_file.at[index, 'gencode_symbol'] = self.ensg_dict[row['gene_id']]['gene_symbols'][i]
+                            self.gene_file.at[index, 'gencode_symbol'] = str(self.ensg_dict[row['gene_id']]['gene_symbols'][i])
                             self.gene_file.at[index, 'ENST'] = self.ensg_dict[row['gene_id']]['ensts'][i]
                             self.gene_file.at[index, 'ENSP'] = self.ensg_dict[row['gene_id']]['ensps'][i]
                             collected += 1
@@ -352,33 +323,25 @@ class FASTAProcessor():
 
 
         #UniProt only has a stripped ENSP number: ENSP00000494177 instead of ENSP00000494177.1, tries to make the match. Will take first .x number 
-            elif not seq_assigned and has_ensp and "." not in str(ens_p) and has_unip:
-                found = False
-                for v in range(1, 11):
-                    key = f"{ens_p}.{v}"
-                    if key in self.ensp_dict:
-                        self.gene_file.at[index, 'Sequence'] = seq_unip if seq_unip is not None else self.ensp_dict[key]['sequence']
-                        self.gene_file.at[index, 'CDS'] = self.ensp_dict[key]['CDS_length']
-                        self.gene_file.at[index, 'gencode_symbol'] = self.ensp_dict[key]['gene_symbol']
-                        if seq_unip is not None and self.ensp_dict[key].get('sequence') is not None:
-                            if seq_unip != self.ensp_dict[key]['sequence']:
-                                try:
-                                    self.gene_file.at[index, 'Difference in lengths'] = len(seq_unip) - int(self.ensp_dict[key]["CDS_length"])
-                                except Exception:
-                                    self.gene_file.at[index, 'Difference in lengths'] = pd.NA
+            elif "." not in row['ENSP']:
+                version = [f".{i}" for i in range(1, 10)]
+                for i in version:
+                    posKey = row['ENSP'] + i
+                    if posKey in self.ensp_dict:
+                        self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']]
+                        self.gene_file.at[index, 'CDS'] = float(self.ensp_dict[posKey]["CDS_length"])
+                        self.gene_file.at[index, 'gencode_symbol'] = str(self.ensp_dict[posKey]['gene_symbol'])
+                        if self.uniprot_dict[row['uniprot_id']] != self.ensp_dict[posKey]['sequence']:
+                            self.gene_file.at[index, 'Difference in lengths'] = len(self.uniprot_dict[row['uniprot_id']]) - int((self.ensp_dict[posKey]["CDS_length"]))
                         strippedKey += 1
-                        found = True
-                        seq_assigned = True
-                        break
-                if not found:
-                    # fallback to UniProt seq if present
-                    if has_unip:
-                        self.gene_file.at[index, 'Sequence'] = seq_unip
-                        missed += 1
-                        seq_assigned = True
 
-            # if after all attempts still empty, keep no sequence
+        #Just takes the UniProtSeq and ignores ENSP num. For now it is unclear why these ones don't get caught above
             else:
+                print(row['gene_id'])
+                self.gene_file.at[index, 'Sequence'] = self.uniprot_dict[row['uniprot_id']]
+                missed += 1		
+
+            if self.gene_file.at[index, 'Sequence'] == '':
                 noSeq += 1
 
         #Calculates Hydrophobicity and pI
@@ -391,7 +354,7 @@ class FASTAProcessor():
                 self.gene_file.at[index, 'Hydrophobicity'] = round(analysis.gravy(), 3)
                 self.gene_file.at[index, 'PI'] = round(analysis.isoelectric_point(), 3)
 
-        #Print gene stats
+
         print("\n -----Stats----- \n")
         print("Number of UniProt and Gencode Sequence Matches:", sameSeq) 
         print("Number of genes with a ENSP seq to match UniProt:", collected)
@@ -407,7 +370,8 @@ class FASTAProcessor():
 
         print("\nTrue number of genes:", count)
 
-    
+
+
     def specialGeneLists(self):
         unreviewed = 0
         self.gene_file['entry_type'] = self.gene_file['entry_type'].astype(bool)
@@ -418,7 +382,7 @@ class FASTAProcessor():
                 self.gene_file.at[index, 'isoform'] = pd.NA
             if pd.isna(row.get('CDS')):
                 self.noCDS.append(row)
-                self.gene_file.at[index, 'Sequence'] = 'MJA'
+                #self.gene_file.at[index, 'Sequence'] = 'MJA'
             if pd.isna(row.get('uniprot_id')):
                 self.no_uniprot.append(row)
             if row.get('evidence') == 5:
